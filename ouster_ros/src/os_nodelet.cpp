@@ -187,6 +187,7 @@ void OusterNodelet::onInit() {
     lidar_mode = sensor::lidar_mode_of_string(lidar_mode_arg);
     if (!lidar_mode) {
       ROS_ERROR("Invalid lidar mode %s", lidar_mode_arg.c_str());
+      return;
     }
   }
 
@@ -199,11 +200,13 @@ void OusterNodelet::onInit() {
     timestamp_mode = sensor::timestamp_mode_of_string(timestamp_mode_arg);
     if (!timestamp_mode) {
       ROS_ERROR("Invalid timestamp mode %s", timestamp_mode_arg.c_str());
+      return;
     }
   }
 
   if (!replay && (!hostname.size() || !udp_dest.size())) {
     ROS_ERROR("Must specify both hostname and udp destination");
+    return;
   }
 
   ROS_INFO("Client version: %s", ouster::CLIENT_VERSION_FULL);
@@ -221,6 +224,7 @@ void OusterNodelet::onInit() {
 
       // just serve config service
       ros::spin();
+      return;
     }
     catch (const std::runtime_error& e) {
       ROS_ERROR("Error when running in replay mode: %s", e.what());
@@ -233,6 +237,7 @@ void OusterNodelet::onInit() {
 
     if (!cli) {
       ROS_ERROR("Failed to initialize sensor at: %s", hostname.c_str());
+      return;
     }
     ROS_INFO("Sensor initialized successfully");
 
