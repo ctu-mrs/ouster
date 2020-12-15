@@ -1,0 +1,5 @@
+<library path="lib/libOusterRos">
+  <class name="ouster_nodelet/OusterRos" type="ouster_nodelet::OusterRos" base_class_type="nodelet::Nodelet">
+    <description>Ouster ros nodelet</description>
+  </class>
+</library>
