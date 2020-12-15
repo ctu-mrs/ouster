@@ -32,22 +32,26 @@ namespace sensor  = ouster::sensor;
 namespace ouster_nodelet
 {
 
-class OusterRos : public nodelet::Nodelet {
-
-public:
-  virtual void onInit();
-
-private:
-  void populate_metadata_defaults(sensor::sensor_info& info, sensor::lidar_mode specified_lidar_mode);
-  void write_metadata(const std::string& meta_file, const std::string& metadata);
-  int connection_loop(ros::NodeHandle& nh, sensor::client& cli, const sensor::sensor_info& info);
-
-};
+  /* class OusterNodelet //{ */
+  
+  class OusterNodelet : public nodelet::Nodelet {
+  
+  public:
+    virtual void onInit();
+  
+  private:
+    void populate_metadata_defaults(sensor::sensor_info& info, sensor::lidar_mode specified_lidar_mode);
+    void write_metadata(const std::string& meta_file, const std::string& metadata);
+    int connection_loop(ros::NodeHandle& nh, sensor::client& cli, const sensor::sensor_info& info);
+  
+  };
+  
+  //}
 
 /* populate_metadata_defaults //{ */
 
 // fill in values that could not be parsed from metadata
-void OusterRos::populate_metadata_defaults(sensor::sensor_info& info, sensor::lidar_mode specified_lidar_mode) {
+void OusterNodelet::populate_metadata_defaults(sensor::sensor_info& info, sensor::lidar_mode specified_lidar_mode) {
   if (!info.name.size())
     info.name = "UNKNOWN";
 
@@ -80,7 +84,7 @@ void OusterRos::populate_metadata_defaults(sensor::sensor_info& info, sensor::li
 /*  write_metadata() //{ */
 
 // try to write metadata file
-void OusterRos::write_metadata(const std::string& meta_file, const std::string& metadata) {
+void OusterNodelet::write_metadata(const std::string& meta_file, const std::string& metadata) {
   std::ofstream ofs;
   ofs.open(meta_file);
   ofs << metadata << std::endl;
@@ -109,7 +113,7 @@ void write_metadata(const std::string& meta_file, const std::string& metadata) {
 
 /* connection_loop() //{ */
 
-int OusterRos::connection_loop(ros::NodeHandle& nh, sensor::client& cli, const sensor::sensor_info& info) {
+int OusterNodelet::connection_loop(ros::NodeHandle& nh, sensor::client& cli, const sensor::sensor_info& info) {
   auto lidar_packet_pub = nh.advertise<PacketMsg>("lidar_packets", 1280);
   auto imu_packet_pub   = nh.advertise<PacketMsg>("imu_packets", 100);
 
@@ -146,7 +150,7 @@ int OusterRos::connection_loop(ros::NodeHandle& nh, sensor::client& cli, const s
 
 /* onInit() //{ */
 
-void OusterRos::onInit() {
+void OusterNodelet::onInit() {
 
   /* ros::init(argc, argv, "os_node"); */
   ros::NodeHandle nh("~");
@@ -243,6 +247,8 @@ void OusterRos::onInit() {
 
     ROS_INFO("Using lidar_mode: %s", sensor::to_string(info.mode).c_str());
     ROS_INFO("%s sn: %s firmware rev: %s", info.prod_line.c_str(), info.sn.c_str(), info.fw_rev.c_str());
+
+    connection_loop(nh, *cli, info);
   }
 }
 
@@ -251,4 +257,4 @@ void OusterRos::onInit() {
 }  // namespace ouster_ros_nodelet
 
 /* every nodelet must export its class as nodelet plugin */
-PLUGINLIB_EXPORT_CLASS(ouster_nodelet::OusterRos, nodelet::Nodelet);
+PLUGINLIB_EXPORT_CLASS(ouster_nodelet::OusterNodelet, nodelet::Nodelet);

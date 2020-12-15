@@ -43,7 +43,7 @@ catkin_package(
 
   LIBRARIES
   ouster_ros
-  OusterRos
+  OusterNodelet
 
   CATKIN_DEPENDS
   roscpp
@@ -74,9 +74,9 @@ target_link_libraries(ouster_ros PUBLIC ${catkin_LIBRARIES} ouster_build PRIVATE
 add_dependencies(ouster_ros ${PROJECT_NAME}_gencpp)
 
 # ==== Executables ====
-add_library(OusterRos src/ouster_nodelet.cpp)
-target_link_libraries(OusterRos ouster_ros ${catkin_LIBRARIES})
-add_dependencies(OusterRos ${PROJECT_NAME}_gencpp)
+add_library(OusterNodelet src/ouster_nodelet.cpp)
+target_link_libraries(OusterNodelet ouster_ros ${catkin_LIBRARIES})
+add_dependencies(OusterNodelet ${PROJECT_NAME}_gencpp)
 
 add_executable(os_cloud_node src/os_cloud_node.cpp)
 target_link_libraries(os_cloud_node ouster_ros ${catkin_LIBRARIES})
@@ -92,7 +92,7 @@ add_dependencies(img_node ${PROJECT_NAME}_gencpp)
 
 # ==== Install ====
 install(
-  TARGETS ouster_ros OusterRos os_cloud_node viz_node img_node
+  TARGETS ouster_ros OusterNodelet os_cloud_node viz_node img_node
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
