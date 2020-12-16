@@ -45,6 +45,7 @@ catkin_package(
   ouster_ros
   OusterNodelet
   OusterCloudNodelet
+  OusterImgNodelet
 
   CATKIN_DEPENDS
   roscpp
@@ -83,13 +84,9 @@ add_library(OusterNodelet src/os_nodelet.cpp)
 target_link_libraries(OusterNodelet ouster_ros ${catkin_LIBRARIES})
 add_dependencies(OusterNodelet ${PROJECT_NAME}_gencpp)
 
-add_executable(viz_node src/viz_node.cpp)
-target_link_libraries(viz_node ouster_ros ${catkin_LIBRARIES} glfw GLEW)
-add_dependencies(viz_node ${PROJECT_NAME}_gencpp)
-
-add_executable(img_node src/img_node.cpp)
-target_link_libraries(img_node ouster_ros ${catkin_LIBRARIES})
-add_dependencies(img_node ${PROJECT_NAME}_gencpp)
+add_library(OusterImgNodelet src/img_nodelet.cpp)
+target_link_libraries(OusterImgNodelet ouster_ros ${catkin_LIBRARIES})
+add_dependencies(OusterImgNodelet ${PROJECT_NAME}_gencpp)
 
 # # ==== Install ====
 # install(

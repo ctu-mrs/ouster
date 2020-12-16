@@ -18,7 +18,6 @@
   <arg name="nodelet_manager" default="$(arg uav_name)_ouster_nodelet_manager" />
   <arg name="launch_prefix" default="" />
 
-  <!-- <node pkg="ouster_ros" name="os_node" type="os_node" output="screen" required="true"> -->
   <node pkg="nodelet" type="nodelet" name="os_node" args="$(arg nodelet) ouster_nodelet/OusterNodelet $(arg nodelet_manager)" output="screen" launch-prefix="$(arg launch_prefix)">
     <param name="~/lidar_mode" type="string" value="$(arg lidar_mode)"/>
     <param name="~/timestamp_mode" type="string" value="$(arg timestamp_mode)"/>
@@ -30,7 +29,6 @@
     <param name="~/metadata" value="$(arg metadata)"/>
   </node>
 
-  <!-- <node pkg="ouster_ros" type="os_cloud_node" name="os_cloud_node" output="screen" required="true"> -->
   <node pkg="nodelet" type="nodelet" name="os_cloud_node" args="$(arg nodelet) ouster_nodelet/OusterCloudNodelet $(arg nodelet_manager)" output="screen" launch-prefix="$(arg launch_prefix)">
     <remap from="~/os_config" to="/os_node/os_config"/>
     <remap from="~/lidar_packets" to="/os_node/lidar_packets"/>
@@ -38,7 +36,7 @@
     <param name="~/tf_prefix" value="$(arg tf_prefix)"/>
   </node>
 
-  <node if="$(arg image)" pkg="ouster_ros" name="img_node" type="img_node" output="screen" required="true">
+  <node if="$(arg image)" pkg="nodelet" type="nodelet" name="img_node" args="$(arg nodelet) ouster_nodelet/OusterImgNodelet $(arg nodelet_manager)" output="screen" launch-prefix="$(arg launch_prefix)">
     <remap from="~/os_config" to="/os_node/os_config"/>
     <remap from="~/points" to="/os_cloud_node/points"/>
   </node>

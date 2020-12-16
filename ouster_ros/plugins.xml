@@ -9,3 +9,9 @@
     <description>Ouster cloud nodelet</description>
   </class>
 </library>
+
+<library path="lib/libOusterImgNodelet">
+  <class name="ouster_nodelet/OusterImgNodelet" type="ouster_nodelet::OusterImgNodelet" base_class_type="nodelet::Nodelet">
+    <description>Ouster cloud nodelet</description>
+  </class>
+</library>
