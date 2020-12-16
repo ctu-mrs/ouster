@@ -26,8 +26,8 @@ find_package(
   nodelet)
 
 # ==== Options ====
-set(CMAKE_CXX_STANDARD 14)
-add_compile_options(-Wall -Wextra -Werror)
+set(CMAKE_CXX_STANDARD 17)
+add_compile_options(-Wall -Wextra)
 option(CMAKE_POSITION_INDEPENDENT_CODE "Build position independent code." ON)
 
 # ==== Catkin ====
@@ -75,13 +75,13 @@ target_link_libraries(ouster_ros PUBLIC ${catkin_LIBRARIES} ouster_build PRIVATE
 add_dependencies(ouster_ros ${PROJECT_NAME}_gencpp)
 
 # ==== Executables ====
-add_library(OusterNodelet src/os_nodelet.cpp)
-target_link_libraries(OusterNodelet ouster_ros ${catkin_LIBRARIES})
-add_dependencies(OusterNodelet ${PROJECT_NAME}_gencpp)
-
 add_library(OusterCloudNodelet src/os_cloud_nodelet.cpp)
 target_link_libraries(OusterCloudNodelet ouster_ros ${catkin_LIBRARIES})
 add_dependencies(OusterCloudNodelet ${PROJECT_NAME}_gencpp)
+
+add_library(OusterNodelet src/os_nodelet.cpp)
+target_link_libraries(OusterNodelet ouster_ros ${catkin_LIBRARIES})
+add_dependencies(OusterNodelet ${PROJECT_NAME}_gencpp)
 
 add_executable(viz_node src/viz_node.cpp)
 target_link_libraries(viz_node ouster_ros ${catkin_LIBRARIES} glfw GLEW)
@@ -91,13 +91,13 @@ add_executable(img_node src/img_node.cpp)
 target_link_libraries(img_node ouster_ros ${catkin_LIBRARIES})
 add_dependencies(img_node ${PROJECT_NAME}_gencpp)
 
-# ==== Install ====
-install(
-  TARGETS ouster_ros OusterNodelet OusterCloudNodelet viz_node img_node
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
-install(
-  DIRECTORY ${_ouster_ros_INCLUDE_DIRS}
-  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
-install(FILES ouster.launch DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+# # ==== Install ====
+# install(
+#   TARGETS ouster_ros OusterNodelet OusterCloudNodelet viz_node img_node
+#   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+# install(
+#   DIRECTORY ${_ouster_ros_INCLUDE_DIRS}
+#   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
+# install(FILES ouster.launch DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})

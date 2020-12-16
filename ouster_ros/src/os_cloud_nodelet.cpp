@@ -38,13 +38,15 @@ class OusterCloudNodelet : public nodelet::Nodelet {
 
 public:
   virtual void onInit();
+private:
+
 };
 
 //}
 
 /* onInit() //{ */
 
-void onInit() {
+void OusterCloudNodelet::onInit() {
 
   ros::NodeHandle nh("~");
 
@@ -107,6 +109,7 @@ void onInit() {
 }
 
 //}
+
 }  // namespace ouster_nodelet
 
 /* every nodelet must export its class as nodelet plugin */

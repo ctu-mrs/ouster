@@ -38,11 +38,6 @@
     <param name="~/tf_prefix" value="$(arg tf_prefix)"/>
   </node>
 
-  <node if="$(arg viz)" pkg="ouster_ros" name="viz_node" type="viz_node" output="screen" required="true">
-    <remap from="~/os_config" to="/os_node/os_config"/>
-    <remap from="~/lidar_packets" to="/os_node/lidar_packets"/>
-  </node>
-
   <node if="$(arg image)" pkg="ouster_ros" name="img_node" type="img_node" output="screen" required="true">
     <remap from="~/os_config" to="/os_node/os_config"/>
     <remap from="~/points" to="/os_cloud_node/points"/>

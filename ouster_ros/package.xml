@@ -32,10 +32,7 @@
   <exec_depend>nodelet</exec_depend>
 
   <export>
-
-    <!-- The plugins.xml file defines nodelet as a plugin -->
     <nodelet plugin="${prefix}/plugins.xml" />
-
   </export>
 
 </package>
