@@ -24,6 +24,7 @@
 
 #include <nodelet/nodelet.h>
 #include <pluginlib/class_list_macros.h>
+#include <mrs_msgs/OusterInfo.h>
 
 using PacketMsg   = ouster_ros::PacketMsg;
 using OSConfigSrv = ouster_ros::OSConfigSrv;
@@ -32,21 +33,22 @@ namespace sensor  = ouster::sensor;
 namespace ouster_nodelet
 {
 
-  /* class OusterNodelet //{ */
-  
-  class OusterNodelet : public nodelet::Nodelet {
-  
-  public:
-    virtual void onInit();
-  
-  private:
-    void populate_metadata_defaults(sensor::sensor_info& info, sensor::lidar_mode specified_lidar_mode);
-    void write_metadata(const std::string& meta_file, const std::string& metadata);
-    int connection_loop(ros::NodeHandle& nh, sensor::client& cli, const sensor::sensor_info& info);
-  
-  };
-  
-  //}
+/* class OusterNodelet //{ */
+
+class OusterNodelet : public nodelet::Nodelet {
+
+public:
+  virtual void onInit();
+
+private:
+  void populate_metadata_defaults(sensor::sensor_info& info, sensor::lidar_mode specified_lidar_mode);
+  void write_metadata(const std::string& meta_file, const std::string& metadata);
+  int  connection_loop(ros::NodeHandle& nh, sensor::client& cli, const sensor::sensor_info& info);
+
+  ros::Publisher sensor_info_publisher;
+};
+
+//}
 
 /* populate_metadata_defaults //{ */
 
@@ -152,8 +154,9 @@ int OusterNodelet::connection_loop(ros::NodeHandle& nh, sensor::client& cli, con
 
 void OusterNodelet::onInit() {
 
-  /* ros::init(argc, argv, "os_node"); */
   ros::NodeHandle nh("~");
+
+  sensor_info_publisher = nh.advertise<mrs_msgs::OusterInfo>("sensor_info", 1, true);
 
   std::string published_metadata;
   auto        srv = nh.advertiseService<OSConfigSrv::Request, OSConfigSrv::Response>("os_config", [&](OSConfigSrv::Request&, OSConfigSrv::Response& res) {
@@ -250,6 +253,41 @@ void OusterNodelet::onInit() {
     populate_metadata_defaults(info, sensor::MODE_UNSPEC);
     published_metadata = to_string(info);
 
+    mrs_msgs::OusterInfo ouster_info;
+    ouster_info.name                           = info.name;
+    ouster_info.sn                             = info.sn;
+    ouster_info.fw_rev                         = info.fw_rev;
+    ouster_info.mode                           = info.mode;
+    ouster_info.prod_line                      = info.prod_line;
+    ouster_info.beam_azimuth_angles            = info.beam_azimuth_angles;
+    ouster_info.beam_altitude_angles           = info.beam_altitude_angles;
+    ouster_info.lidar_origin_to_beam_origin_mm = info.lidar_origin_to_beam_origin_mm;
+
+    info.imu_to_sensor_transform.transposeInPlace();
+    info.lidar_to_sensor_transform.transposeInPlace();
+    info.extrinsic.transposeInPlace();
+
+    for (int i = 0; i < info.imu_to_sensor_transform.size(); i++) {
+      ouster_info.imu_to_sensor_transform.push_back(info.imu_to_sensor_transform(i));
+    }
+
+    for (int i = 0; i < info.lidar_to_sensor_transform.size(); i++) {
+      ouster_info.lidar_to_sensor_transform.push_back(info.lidar_to_sensor_transform(i));
+    }
+
+    for (int i = 0; i < info.extrinsic.size(); i++) {
+      ouster_info.extrinsic.push_back(info.extrinsic(i));
+    }
+
+    try {
+      sensor_info_publisher.publish(ouster_info);
+      ROS_INFO("Sensor info published!");
+    }
+    catch (...) {
+      ROS_ERROR_THROTTLE(1.0, "[Ouster]: could not publish topic %s", sensor_info_publisher.getTopic().c_str());
+    }
+
+    ROS_INFO("Lidar: %s", info.name.c_str());
     ROS_INFO("Using lidar_mode: %s", sensor::to_string(info.mode).c_str());
     ROS_INFO("%s sn: %s firmware rev: %s", info.prod_line.c_str(), info.sn.c_str(), info.fw_rev.c_str());
 
@@ -259,7 +297,7 @@ void OusterNodelet::onInit() {
 
 //}
 
-}  // namespace ouster_ros_nodelet
+}  // namespace ouster_nodelet
 
 /* every nodelet must export its class as nodelet plugin */
 PLUGINLIB_EXPORT_CLASS(ouster_nodelet::OusterNodelet, nodelet::Nodelet);

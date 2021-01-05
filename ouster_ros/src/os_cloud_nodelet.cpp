@@ -59,7 +59,9 @@ void OusterCloudNodelet::onInit() {
 
   ouster_ros::OSConfigSrv cfg{};
   auto                    client = nh.serviceClient<ouster_ros::OSConfigSrv>("os_config");
+  ROS_INFO("[OusterCloudNodelet]: waiting 11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111");
   client.waitForExistence();
+  ROS_INFO("[OusterCloudNodelet]: exist now 11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111");
   if (!client.call(cfg)) {
     ROS_ERROR("Calling config service failed");
     return;

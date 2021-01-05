@@ -15,6 +15,7 @@ find_package(
   catkin REQUIRED
   COMPONENTS message_generation
   std_msgs
+  mrs_msgs
   sensor_msgs
   geometry_msgs
   pcl_ros
@@ -52,6 +53,7 @@ catkin_package(
   message_runtime
   pcl_ros
   std_msgs
+  mrs_msgs
   sensor_msgs
   geometry_msgs
   DEPENDS
