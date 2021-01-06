@@ -38,8 +38,8 @@ class OusterCloudNodelet : public nodelet::Nodelet {
 
 public:
   virtual void onInit();
-private:
 
+private:
 };
 
 //}
@@ -59,11 +59,9 @@ void OusterCloudNodelet::onInit() {
 
   ouster_ros::OSConfigSrv cfg{};
   auto                    client = nh.serviceClient<ouster_ros::OSConfigSrv>("os_config");
-  ROS_INFO("[OusterCloudNodelet]: waiting 11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111");
   client.waitForExistence();
-  ROS_INFO("[OusterCloudNodelet]: exist now 11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111");
   if (!client.call(cfg)) {
-    ROS_ERROR("Calling config service failed");
+    ROS_ERROR("[OusterCloudNodelet]: Calling config service failed");
     return;
   }
 
@@ -89,11 +87,16 @@ void OusterCloudNodelet::onInit() {
       if (h != ls.headers.end()) {
         scan_to_cloud(xyz_lut, h->timestamp, ls, cloud);
         lidar_pub.publish(ouster_ros::cloud_to_cloud_msg(cloud, h->timestamp, sensor_frame));
+        ROS_INFO_THROTTLE(3.0, "[OusterCloudNodelet]: publishing point cloud");
       }
     }
   };
 
-  auto imu_handler = [&](const PacketMsg& p) { imu_pub.publish(ouster_ros::packet_to_imu_msg(p, imu_frame, pf)); };
+  auto imu_handler = [&](const PacketMsg& p) {
+    imu_pub.publish(ouster_ros::packet_to_imu_msg(p, imu_frame, pf));
+    ROS_INFO_THROTTLE(3.0, "[OusterCloudNodelet]: publishing imu data");
+  };
+
 
   auto lidar_packet_sub = nh.subscribe<PacketMsg, const PacketMsg&>("lidar_packets", 2048, lidar_handler);
   auto imu_packet_sub   = nh.subscribe<PacketMsg, const PacketMsg&>("imu_packets", 100, imu_handler);

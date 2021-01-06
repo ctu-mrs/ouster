@@ -66,7 +66,7 @@ void OusterImgNodelet::onInit() {
   auto                    client = nh.serviceClient<ouster_ros::OSConfigSrv>("os_config");
   client.waitForExistence();
   if (!client.call(cfg)) {
-    ROS_ERROR("Calling os config service failed");
+    ROS_ERROR("[OusterImgNodelet]: Calling os config service failed");
     return;
   }
 
@@ -153,6 +153,7 @@ void OusterImgNodelet::onInit() {
     range_image_pub.publish(range_image);
     ambient_image_pub.publish(ambient_image);
     intensity_image_pub.publish(intensity_image);
+    ROS_INFO_THROTTLE(3.0, "[OusterImgNodelet]: publishing images");
   };
 
   auto pc_sub = nh.subscribe<sensor_msgs::PointCloud2>("points", 500, cloud_handler);

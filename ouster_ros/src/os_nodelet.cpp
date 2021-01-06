@@ -62,12 +62,12 @@ void OusterNodelet::populate_metadata_defaults(sensor::sensor_info& info, sensor
 
   ouster::util::version v = ouster::util::version_of_string(info.fw_rev);
   if (v == ouster::util::invalid_version)
-    ROS_WARN("Unknown sensor firmware version; output may not be reliable");
+    ROS_WARN("[OusterNodelet]: Unknown sensor firmware version; output may not be reliable");
   else if (v < sensor::min_version)
-    ROS_WARN("Firmware < %s not supported; output may not be reliable", to_string(sensor::min_version).c_str());
+    ROS_WARN("[OusterNodelet]: Firmware < %s not supported; output may not be reliable", to_string(sensor::min_version).c_str());
 
   if (!info.mode) {
-    ROS_WARN("Lidar mode not found in metadata; output may not be reliable");
+    ROS_WARN("[OusterNodelet]: Lidar mode not found in metadata; output may not be reliable");
     info.mode = specified_lidar_mode;
   }
 
@@ -75,7 +75,7 @@ void OusterNodelet::populate_metadata_defaults(sensor::sensor_info& info, sensor
     info.prod_line = "UNKNOWN";
 
   if (info.beam_azimuth_angles.empty() || info.beam_altitude_angles.empty()) {
-    ROS_WARN("Beam angles not found in metadata; using design values");
+    ROS_WARN("[OusterNodelet]: Beam angles not found in metadata; using design values");
     info.beam_azimuth_angles  = sensor::gen1_azimuth_angles;
     info.beam_altitude_angles = sensor::gen1_altitude_angles;
   }
@@ -92,9 +92,9 @@ void OusterNodelet::write_metadata(const std::string& meta_file, const std::stri
   ofs << metadata << std::endl;
   ofs.close();
   if (ofs) {
-    ROS_INFO("Wrote metadata to $ROS_HOME/%s", meta_file.c_str());
+    ROS_INFO("[OusterNodelet]: Wrote metadata to $ROS_HOME/%s", meta_file.c_str());
   } else {
-    ROS_WARN("Failed to write metadata to %s; check that the path is valid", meta_file.c_str());
+    ROS_WARN("[OusterNodelet]: Failed to write metadata to %s; check that the path is valid", meta_file.c_str());
   }
 }
 
@@ -105,9 +105,9 @@ void write_metadata(const std::string& meta_file, const std::string& metadata) {
   ofs << metadata << std::endl;
   ofs.close();
   if (ofs) {
-    ROS_INFO("Wrote metadata to $ROS_HOME/%s", meta_file.c_str());
+    ROS_INFO("[OusterNodelet]: Wrote metadata to $ROS_HOME/%s", meta_file.c_str());
   } else {
-    ROS_WARN("Failed to write metadata to %s; check that the path is valid", meta_file.c_str());
+    ROS_WARN("[OusterNodelet]: Failed to write metadata to %s; check that the path is valid", meta_file.c_str());
   }
 }
 
@@ -128,11 +128,11 @@ int OusterNodelet::connection_loop(ros::NodeHandle& nh, sensor::client& cli, con
   while (ros::ok()) {
     auto state = sensor::poll_client(cli);
     if (state == sensor::EXIT) {
-      ROS_INFO("poll_client: caught signal, exiting");
+      ROS_INFO("[OusterNodelet]: poll_client: caught signal, exiting");
       return EXIT_SUCCESS;
     }
     if (state & sensor::CLIENT_ERROR) {
-      ROS_ERROR("poll_client: returned error");
+      ROS_ERROR("[OusterNodelet]: poll_client: returned error");
       return EXIT_FAILURE;
     }
     if (state & sensor::LIDAR_DATA) {
@@ -185,11 +185,11 @@ void OusterNodelet::onInit() {
   sensor::lidar_mode lidar_mode = sensor::MODE_UNSPEC;
   if (lidar_mode_arg.size()) {
     if (replay)
-      ROS_WARN("Lidar mode set in replay mode. May be ignored");
+      ROS_WARN("[OusterNodelet]: Lidar mode set in replay mode. May be ignored");
 
     lidar_mode = sensor::lidar_mode_of_string(lidar_mode_arg);
     if (!lidar_mode) {
-      ROS_ERROR("Invalid lidar mode %s", lidar_mode_arg.c_str());
+      ROS_ERROR("[OusterNodelet]: Invalid lidar mode %s", lidar_mode_arg.c_str());
       return;
     }
   }
@@ -198,51 +198,51 @@ void OusterNodelet::onInit() {
   sensor::timestamp_mode timestamp_mode = sensor::TIME_FROM_UNSPEC;
   if (timestamp_mode_arg.size()) {
     if (replay)
-      ROS_WARN("Timestamp mode set in replay mode. Will be ignored");
+      ROS_WARN("[OusterNodelet]: Timestamp mode set in replay mode. Will be ignored");
 
     timestamp_mode = sensor::timestamp_mode_of_string(timestamp_mode_arg);
     if (!timestamp_mode) {
-      ROS_ERROR("Invalid timestamp mode %s", timestamp_mode_arg.c_str());
+      ROS_ERROR("[OusterNodelet]: Invalid timestamp mode %s", timestamp_mode_arg.c_str());
       return;
     }
   }
 
   if (!replay && (!hostname.size() || !udp_dest.size())) {
-    ROS_ERROR("Must specify both hostname and udp destination");
+    ROS_ERROR("[OusterNodelet]: Must specify both hostname and udp destination");
     return;
   }
 
-  ROS_INFO("Client version: %s", ouster::CLIENT_VERSION_FULL);
+  ROS_INFO("[OusterNodelet]: Client version: %s", ouster::CLIENT_VERSION_FULL);
 
   if (replay) {
-    ROS_INFO("Running in replay mode");
+    ROS_INFO("[OusterNodelet]: Running in replay mode");
 
     // populate info for config service
     try {
       auto info          = sensor::metadata_from_json(meta_file);
       published_metadata = to_string(info);
 
-      ROS_INFO("Using lidar_mode: %s", sensor::to_string(info.mode).c_str());
-      ROS_INFO("%s sn: %s firmware rev: %s", info.prod_line.c_str(), info.sn.c_str(), info.fw_rev.c_str());
+      ROS_INFO("[OusterNodelet]: Using lidar_mode: %s", sensor::to_string(info.mode).c_str());
+      ROS_INFO("[OusterNodelet]: %s sn: %s firmware rev: %s", info.prod_line.c_str(), info.sn.c_str(), info.fw_rev.c_str());
 
       // just serve config service
       ros::spin();
       return;
     }
     catch (const std::runtime_error& e) {
-      ROS_ERROR("Error when running in replay mode: %s", e.what());
+      ROS_ERROR("[OusterNodelet]: Error when running in replay mode: %s", e.what());
     }
   } else {
-    ROS_INFO("Connecting to %s; sending data to %s", hostname.c_str(), udp_dest.c_str());
-    ROS_INFO("Waiting for sensor to initialize ...");
+    ROS_INFO("[OusterNodelet]: Connecting to %s; sending data to %s", hostname.c_str(), udp_dest.c_str());
+    ROS_INFO("[OusterNodelet]: Waiting for sensor to initialize ...");
 
     auto cli = sensor::init_client(hostname, udp_dest, lidar_mode, timestamp_mode, lidar_port, imu_port);
 
     if (!cli) {
-      ROS_ERROR("Failed to initialize sensor at: %s", hostname.c_str());
+      ROS_ERROR("[OusterNodelet]: Failed to initialize sensor at: %s", hostname.c_str());
       return;
     }
-    ROS_INFO("Sensor initialized successfully");
+    ROS_INFO("[OusterNodelet]: Sensor initialized successfully");
 
     // write metadata file to cwd (usually ~/.ros)
     auto metadata = sensor::get_metadata(*cli);
@@ -281,15 +281,15 @@ void OusterNodelet::onInit() {
 
     try {
       sensor_info_publisher.publish(ouster_info);
-      ROS_INFO("Sensor info published!");
+      ROS_INFO("[OusterNodelet]: Sensor info published!");
     }
     catch (...) {
-      ROS_ERROR_THROTTLE(1.0, "[Ouster]: could not publish topic %s", sensor_info_publisher.getTopic().c_str());
+      ROS_ERROR_THROTTLE(1.0, "[OusterNodelet]: could not publish topic %s", sensor_info_publisher.getTopic().c_str());
     }
 
-    ROS_INFO("Lidar: %s", info.name.c_str());
-    ROS_INFO("Using lidar_mode: %s", sensor::to_string(info.mode).c_str());
-    ROS_INFO("%s sn: %s firmware rev: %s", info.prod_line.c_str(), info.sn.c_str(), info.fw_rev.c_str());
+    ROS_INFO("[OusterNodelet]: Hostname: %s", info.name.c_str());
+    ROS_INFO("[OusterNodelet]: Using lidar_mode: %s", sensor::to_string(info.mode).c_str());
+    ROS_INFO("[OusterNodelet]: %s sn: %s firmware rev: %s", info.prod_line.c_str(), info.sn.c_str(), info.fw_rev.c_str());
 
     connection_loop(nh, *cli, info);
   }
