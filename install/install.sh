@@ -1,6 +1,6 @@
 #!/bin/bash
 sudo apt update
-sudo apt -y install libglew-dev
+sudo apt -y install libglew-dev libglfw3-dev
 
 num=`cat ~/.bashrc | grep "OUSTER_IP" | wc -l`
 if [ "$num" -lt "1" ]; then
