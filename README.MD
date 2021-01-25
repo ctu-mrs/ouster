@@ -2,6 +2,7 @@
 
 Use the supplied installation script to install required dependencies.
 
+
 # Change ouster to static IP:
 
 ```bash
