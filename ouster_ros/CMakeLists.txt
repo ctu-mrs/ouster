@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.1.0)
 
+set(CMAKE_CXX_FLAGS "-std=c++17")
+
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 include(DefaultBuildType)
 
@@ -28,7 +30,7 @@ find_package(
 
 # ==== Options ====
 set(CMAKE_CXX_STANDARD 17)
-add_compile_options(-Wall -Wextra)
+# add_compile_options(-Wall -Wextra)
 option(CMAKE_POSITION_INDEPENDENT_CODE "Build position independent code." ON)
 
 # ==== Catkin ====
