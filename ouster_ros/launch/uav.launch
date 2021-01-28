@@ -12,12 +12,12 @@
   <arg name="imu_port" default="0" doc="port to which the sensor should send imu data"/>
   <arg name="metadata" default="" doc="override default metadata file for replays"/>
 
-  <arg name="tf_prefix" default="" doc="namespace for tf transforms"/>
+  <arg name="tf_prefix" default="$(env UAV_NAME)" doc="namespace for tf transforms"/>
 
   <arg name="image" default="false" doc="publish range/intensity/ambient image topic"/>
 
   <arg name="nodelet" default="standalone" />
-  <arg name="nodelet_manager" default="$(arg UAV_NAME)_ouster_nodelet_manager" />
+  <arg name="nodelet_manager" default="" />
   <arg name="launch_prefix" default="" />
 
   <group ns="$(arg UAV_NAME)">
@@ -48,9 +48,6 @@
       <remap from="~imu_packets" to="os_nodelet/imu_packets"/>
       <param name="~tf_prefix" value="$(arg tf_prefix)"/>
 
-        <!-- Subscribers -->
-      <remap from="~lidar_packets" to="os_nodelet/lidar_packets" />
-      <remap from="~imu_packets" to="os_nodelet/imu_packets" />
     </node>
 
     <node if="$(arg image)" pkg="nodelet" type="nodelet" name="os_img_nodelet" args="$(arg nodelet) ouster_nodelet/OusterImgNodelet $(arg nodelet_manager)" output="screen" launch-prefix="$(arg launch_prefix)">

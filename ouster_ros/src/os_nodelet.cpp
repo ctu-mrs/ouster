@@ -15,6 +15,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <thread>
 
 #include "ouster/build.h"
 #include "ouster/types.h"
@@ -39,13 +40,18 @@ class OusterNodelet : public nodelet::Nodelet {
 
 public:
   virtual void onInit();
+  virtual ~OusterNodelet();
 
 private:
   void populate_metadata_defaults(sensor::sensor_info& info, sensor::lidar_mode specified_lidar_mode);
   void write_metadata(const std::string& meta_file, const std::string& metadata);
-  int  connection_loop(ros::NodeHandle& nh, sensor::client& cli, const sensor::sensor_info& info);
+  int  run();
 
-  ros::Publisher sensor_info_publisher;
+  ros::Publisher sensor_info_publisher_;
+  std::thread    connection_loop_;
+
+  std::string published_metadata_;
+  bool is_running_ = true;
 };
 
 //}
@@ -113,59 +119,16 @@ void write_metadata(const std::string& meta_file, const std::string& metadata) {
 
 //}
 
-/* connection_loop() //{ */
+/* run() //{ */
 
-int OusterNodelet::connection_loop(ros::NodeHandle& nh, sensor::client& cli, const sensor::sensor_info& info) {
-  auto lidar_packet_pub = nh.advertise<PacketMsg>("lidar_packets", 1280);
-  auto imu_packet_pub   = nh.advertise<PacketMsg>("imu_packets", 100);
+int OusterNodelet::run() {
 
-  auto pf = sensor::get_format(info);
+  ros::NodeHandle nh = nodelet::Nodelet::getMTPrivateNodeHandle();
+  ros::Time::waitForValid();
 
-  PacketMsg lidar_packet, imu_packet;
-  lidar_packet.buf.resize(pf.lidar_packet_size + 1);
-  imu_packet.buf.resize(pf.imu_packet_size + 1);
+  ROS_INFO("[OusterNodelet] Initialization started.");
 
-  while (ros::ok()) {
-    auto state = sensor::poll_client(cli);
-    if (state == sensor::EXIT) {
-      ROS_INFO("[OusterNodelet]: poll_client: caught signal, exiting");
-      return EXIT_SUCCESS;
-    }
-    if (state & sensor::CLIENT_ERROR) {
-      ROS_ERROR("[OusterNodelet]: poll_client: returned error");
-      return EXIT_FAILURE;
-    }
-    if (state & sensor::LIDAR_DATA) {
-      if (sensor::read_lidar_packet(cli, lidar_packet.buf.data(), pf))
-        lidar_packet_pub.publish(lidar_packet);
-    }
-    if (state & sensor::IMU_DATA) {
-      if (sensor::read_imu_packet(cli, imu_packet.buf.data(), pf))
-        imu_packet_pub.publish(imu_packet);
-    }
-    ros::spinOnce();
-  }
-  return EXIT_SUCCESS;
-}
-
-//}
-
-/* onInit() //{ */
-
-void OusterNodelet::onInit() {
-
-  ros::NodeHandle nh("~");
-
-  sensor_info_publisher = nh.advertise<mrs_msgs::OusterInfo>("sensor_info", 1, true);
-
-  std::string published_metadata;
-  auto        srv = nh.advertiseService<OSConfigSrv::Request, OSConfigSrv::Response>("os_config", [&](OSConfigSrv::Request&, OSConfigSrv::Response& res) {
-    if (published_metadata.size()) {
-      res.metadata = published_metadata;
-      return true;
-    } else
-      return false;
-  });
+  sensor_info_publisher_ = nh.advertise<mrs_msgs::OusterInfo>("sensor_info", 1, true);
 
   // empty indicates "not set" since roslaunch xml can't optionally set params
   auto hostname           = nh.param("sensor_hostname", std::string{});
@@ -190,7 +153,7 @@ void OusterNodelet::onInit() {
     lidar_mode = sensor::lidar_mode_of_string(lidar_mode_arg);
     if (!lidar_mode) {
       ROS_ERROR("[OusterNodelet]: Invalid lidar mode %s", lidar_mode_arg.c_str());
-      return;
+      return 0;
     }
   }
 
@@ -203,13 +166,13 @@ void OusterNodelet::onInit() {
     timestamp_mode = sensor::timestamp_mode_of_string(timestamp_mode_arg);
     if (!timestamp_mode) {
       ROS_ERROR("[OusterNodelet]: Invalid timestamp mode %s", timestamp_mode_arg.c_str());
-      return;
+      return 0;
     }
   }
 
   if (!replay && (!hostname.size() || !udp_dest.size())) {
     ROS_ERROR("[OusterNodelet]: Must specify both hostname and udp destination");
-    return;
+    return 0;
   }
 
   ROS_INFO("[OusterNodelet]: Client version: %s", ouster::CLIENT_VERSION_FULL);
@@ -220,14 +183,14 @@ void OusterNodelet::onInit() {
     // populate info for config service
     try {
       auto info          = sensor::metadata_from_json(meta_file);
-      published_metadata = to_string(info);
+      published_metadata_ = to_string(info);
 
       ROS_INFO("[OusterNodelet]: Using lidar_mode: %s", sensor::to_string(info.mode).c_str());
       ROS_INFO("[OusterNodelet]: %s sn: %s firmware rev: %s", info.prod_line.c_str(), info.sn.c_str(), info.fw_rev.c_str());
 
       // just serve config service
-      ros::spin();
-      return;
+      /* ros::spin(); */
+      return 0;
     }
     catch (const std::runtime_error& e) {
       ROS_ERROR("[OusterNodelet]: Error when running in replay mode: %s", e.what());
@@ -240,7 +203,7 @@ void OusterNodelet::onInit() {
 
     if (!cli) {
       ROS_ERROR("[OusterNodelet]: Failed to initialize sensor at: %s", hostname.c_str());
-      return;
+      return 0;
     }
     ROS_INFO("[OusterNodelet]: Sensor initialized successfully");
 
@@ -251,7 +214,7 @@ void OusterNodelet::onInit() {
     // populate sensor info
     auto info = sensor::parse_metadata(metadata);
     populate_metadata_defaults(info, sensor::MODE_UNSPEC);
-    published_metadata = to_string(info);
+    published_metadata_ = to_string(info);
 
     mrs_msgs::OusterInfo ouster_info;
     ouster_info.name                           = info.name;
@@ -280,22 +243,82 @@ void OusterNodelet::onInit() {
     }
 
     try {
-      sensor_info_publisher.publish(ouster_info);
+      sensor_info_publisher_.publish(ouster_info);
       ROS_INFO("[OusterNodelet]: Sensor info published!");
     }
     catch (...) {
-      ROS_ERROR_THROTTLE(1.0, "[OusterNodelet]: could not publish topic %s", sensor_info_publisher.getTopic().c_str());
+      ROS_ERROR_THROTTLE(1.0, "[OusterNodelet]: could not publish topic %s", sensor_info_publisher_.getTopic().c_str());
     }
 
     ROS_INFO("[OusterNodelet]: Hostname: %s", info.name.c_str());
     ROS_INFO("[OusterNodelet]: Using lidar_mode: %s", sensor::to_string(info.mode).c_str());
     ROS_INFO("[OusterNodelet]: %s sn: %s firmware rev: %s", info.prod_line.c_str(), info.sn.c_str(), info.fw_rev.c_str());
 
-    connection_loop(nh, *cli, info);
+    auto lidar_packet_pub = nh.advertise<PacketMsg>("lidar_packets", 1280);
+    auto imu_packet_pub   = nh.advertise<PacketMsg>("imu_packets", 100);
+
+    auto pf = sensor::get_format(info);
+
+    PacketMsg lidar_packet, imu_packet;
+    lidar_packet.buf.resize(pf.lidar_packet_size + 1);
+    imu_packet.buf.resize(pf.imu_packet_size + 1);
+
+    ROS_INFO("[OsNodelet] Advertising service os_config.");
+    auto srv = nh.advertiseService<OSConfigSrv::Request, OSConfigSrv::Response>("os_config", [&](OSConfigSrv::Request&, OSConfigSrv::Response& res) {
+      if (published_metadata_.size()) {
+        res.metadata = published_metadata_;
+        return true;
+      } else {
+        ROS_ERROR("returning false");
+        return false;
+      }
+    });
+    ROS_INFO("[OsNodelet] Service os_config advertised.");
+
+    while (ros::ok() && is_running_) {
+      auto state = sensor::poll_client(*cli);
+      if (state == sensor::EXIT) {
+        ROS_INFO("[OusterNodelet]: poll_client: caught signal, exiting");
+        return EXIT_SUCCESS;
+      }
+      if (state & sensor::CLIENT_ERROR) {
+        ROS_ERROR("[OusterNodelet]: poll_client: returned error");
+        return EXIT_FAILURE;
+      }
+      if (state & sensor::LIDAR_DATA) {
+        if (sensor::read_lidar_packet(*cli, lidar_packet.buf.data(), pf))
+          lidar_packet_pub.publish(lidar_packet);
+      }
+      if (state & sensor::IMU_DATA) {
+        if (sensor::read_imu_packet(*cli, imu_packet.buf.data(), pf))
+          imu_packet_pub.publish(imu_packet);
+      }
+
+    }
   }
+  return EXIT_SUCCESS;
 }
 
 //}
+
+/* onInit() //{ */
+
+void OusterNodelet::onInit() {
+
+  connection_loop_ = std::thread(&OusterNodelet::run, this);
+
+}
+
+//}
+
+/* ~OusterNodelet */ /*//{*/
+
+OusterNodelet::~OusterNodelet() {
+  is_running_ = false;
+  connection_loop_.join();
+}
+
+/*//}*/
 
 }  // namespace ouster_nodelet
 
