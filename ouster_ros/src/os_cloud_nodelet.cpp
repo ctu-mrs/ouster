@@ -67,6 +67,8 @@ private:
 
   std::thread init_thread_;
   int         run();
+
+  bool use_system_timestamp_;
 };
 
 //}
@@ -81,6 +83,7 @@ int OusterCloudNodelet::run() {
   ROS_INFO("[OsCloudNodelet] Initializing.");
 
   auto tf_prefix = nh.param("tf_prefix", std::string{});
+  use_system_timestamp_ = nh.param("use_system_timestamp", false);
   ROS_INFO("[OusterCloudNodelet] tf_prefix: %s", tf_prefix.c_str());
   if (!tf_prefix.empty() && tf_prefix.back() != '/')
     tf_prefix.append("/");
@@ -122,7 +125,13 @@ int OusterCloudNodelet::run() {
       if (h != ls_.headers.end()) {
         Cloud cloud{W_, H_};
         scan_to_cloud(xyz_lut_, h->timestamp, ls_, cloud);
-        lidar_pub_.publish(ouster_ros::cloud_to_cloud_msg(cloud, h->timestamp, sensor_frame_));
+        sensor_msgs::PointCloud2 msg = ouster_ros::cloud_to_cloud_msg(cloud, h->timestamp, sensor_frame_);
+        if(use_system_timestamp_){
+          // if packets are not PTP-timestamped, then the header is the time since the sensor was initialized, rather than the time since the epoch
+          msg.header.stamp = ros::Time::now();
+        }
+        lidar_pub_.publish(msg);
+        /* lidar_pub_.publish(ouster_ros::cloud_to_cloud_msg(cloud, h->timestamp, sensor_frame_)); */
         ROS_INFO_THROTTLE(3.0, "[OusterCloudNodelet]: publishing point cloud");
       }
     }

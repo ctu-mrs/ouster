@@ -47,6 +47,7 @@
       <remap from="~lidar_packets" to="os_nodelet/lidar_packets"/>
       <remap from="~imu_packets" to="os_nodelet/imu_packets"/>
       <param name="~tf_prefix" value="$(arg tf_prefix)"/>
+      <param name="~use_system_timestamp" value="true"/>
 
     </node>
 
