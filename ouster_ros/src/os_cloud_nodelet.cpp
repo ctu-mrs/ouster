@@ -125,7 +125,7 @@ int OusterCloudNodelet::run() {
       if (h != ls_.headers.end()) {
         Cloud cloud{W_, H_};
         scan_to_cloud(xyz_lut_, h->timestamp, ls_, cloud);
-        sensor_msgs::PointCloud2 msg = ouster_ros::cloud_to_cloud_msg(cloud, h->timestamp, sensor_frame_);
+        sensor_msgs::PointCloud2 msg = ouster_ros::cloud_to_cloud_msg(cloud, h->timestamp, lidar_frame_);
         if(use_system_timestamp_){
           // if packets are not PTP-timestamped, then the header is the time since the sensor was initialized, rather than the time since the epoch
           msg.header.stamp = ros::Time::now();
