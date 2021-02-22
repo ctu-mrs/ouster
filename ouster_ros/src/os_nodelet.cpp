@@ -190,7 +190,22 @@ int OusterNodelet::run() {
 
       // just serve config service
       /* ros::spin(); */
-      return 0;
+      /* return 0; */
+
+      ROS_INFO("[OsNodelet] Advertising service os_config.");
+      auto srv = nh.advertiseService<OSConfigSrv::Request, OSConfigSrv::Response>("os_config", [&](OSConfigSrv::Request&, OSConfigSrv::Response& res) {
+        if (published_metadata_.size()) {
+          res.metadata = published_metadata_;
+          return true;
+        } else {
+          ROS_ERROR("returning false");
+          return false;
+        }
+      });
+      ROS_INFO("[OsNodelet] Service os_config advertised.");
+
+      while (ros::ok())
+        ros::Duration(0.1).sleep();
     }
     catch (const std::runtime_error& e) {
       ROS_ERROR("[OusterNodelet]: Error when running in replay mode: %s", e.what());
