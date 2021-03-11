@@ -2,6 +2,10 @@
 
   <arg name="UAV_NAME" default="$(env UAV_NAME)" />
 
+  <arg name="debug" default="false" />
+  <arg unless="$(arg debug)" name="launch_prefix" value=""/>
+  <arg     if="$(arg debug)" name="launch_prefix" value="debug_roslaunch"/>
+
   <arg name="sensor_hostname" default="$(env OUSTER_IP)" doc="hostname or IP in dotted decimal form of the sensor"/>
   <arg name="udp_dest" default="$(env OUSTER_UDP_DEST_IP)" doc="hostname or IP where the sensor will send data packets"/>
 
@@ -18,7 +22,6 @@
 
   <arg name="nodelet" default="standalone" />
   <arg name="nodelet_manager" default="" />
-  <arg name="launch_prefix" default="" />
 
   <group ns="$(arg UAV_NAME)">
 
