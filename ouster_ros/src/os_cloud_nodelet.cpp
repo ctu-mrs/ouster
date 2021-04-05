@@ -8,6 +8,7 @@
 #include <ros/service.h>
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <std_msgs/Bool.h>
 #include <tf2_ros/static_transform_broadcaster.h>
 
 #include <algorithm>
@@ -47,7 +48,7 @@ public:
 private:
   bool                                is_initialized_ = false;
   ros::Subscriber                     lidar_packet_sub_, imu_packet_sub_;
-  ros::Publisher                      lidar_pub_, imu_pub_;
+  ros::Publisher                      lidar_pub_, imu_pub_, is_alive_pub_;
   tf2_ros::StaticTransformBroadcaster tf_bcast_;
 
   sensor::sensor_info                    info_;
@@ -82,7 +83,7 @@ int OusterCloudNodelet::run() {
 
   ROS_INFO("[OsCloudNodelet] Initializing.");
 
-  auto tf_prefix = nh.param("tf_prefix", std::string{});
+  auto tf_prefix        = nh.param("tf_prefix", std::string{});
   use_system_timestamp_ = nh.param("use_system_timestamp", false);
   ROS_INFO("[OusterCloudNodelet] tf_prefix: %s", tf_prefix.c_str());
   if (!tf_prefix.empty() && tf_prefix.back() != '/')
@@ -105,8 +106,9 @@ int OusterCloudNodelet::run() {
 
   pf_ptr_ = std::make_shared<sensor::packet_format>(sensor::get_format(info_));
 
-  lidar_pub_ = nh.advertise<sensor_msgs::PointCloud2>("points", 10);
-  imu_pub_   = nh.advertise<sensor_msgs::Imu>("imu", 100);
+  lidar_pub_    = nh.advertise<sensor_msgs::PointCloud2>("points", 10);
+  is_alive_pub_ = nh.advertise<std_msgs::Bool>("is_alive", 10);
+  imu_pub_      = nh.advertise<sensor_msgs::Imu>("imu", 100);
 
   xyz_lut_ = ouster::make_xyz_lut(info_);
 
@@ -127,11 +129,16 @@ int OusterCloudNodelet::run() {
         scan_to_cloud(xyz_lut_, h->timestamp, ls_, cloud);
         sensor_msgs::PointCloud2 msg = ouster_ros::cloud_to_cloud_msg(cloud, h->timestamp, sensor_frame_);
         /* sensor_msgs::PointCloud2 msg = ouster_ros::cloud_to_cloud_msg(cloud, h->timestamp, lidar_frame_); */
-        if(use_system_timestamp_){
+        if (use_system_timestamp_) {
           // if packets are not PTP-timestamped, then the header is the time since the sensor was initialized, rather than the time since the epoch
           msg.header.stamp = ros::Time::now();
         }
         lidar_pub_.publish(msg);
+
+        std_msgs::Bool alive_msg;
+        alive_msg.data = true;
+        is_alive_pub_.publish(alive_msg);
+
         /* lidar_pub_.publish(ouster_ros::cloud_to_cloud_msg(cloud, h->timestamp, sensor_frame_)); */
         ROS_INFO_THROTTLE(3.0, "[OusterCloudNodelet]: publishing point cloud");
       }
