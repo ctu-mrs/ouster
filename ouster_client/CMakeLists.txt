@@ -4,6 +4,19 @@ cmake_minimum_required(VERSION 3.1.0)
 project(ouster_client VERSION 0.1.0)
 set(ouster_client_VERSION_SUFFIX "")
 
+# Override CXX flags inherited from workspace, if precompiled PCL binaries from debian repos are used
+if (DEFINED ENV{PCL_CROSS_COMPILATION})
+  set(PCL_CROSS_COMPILATION $ENV{PCL_CROSS_COMPILATION})
+else()
+  set(PCL_CROSS_COMPILATION "false")
+endif()
+if(${PCL_CROSS_COMPILATION} STREQUAL "false")
+  message("Using precompiled PCL binaries from debian repos. Overriding catkin workspace CMAKE_CXX_FLAGS.")
+  set(CMAKE_CXX_FLAGS "-std=c++17")
+else()
+  message("Using custom-built PCL binaries. Inheriting all CMAKE_CXX_FLAGS from catkin workspace.")
+endif()
+
 # ==== Requirements ====
 find_package(Eigen3 REQUIRED)
 find_package(jsoncpp REQUIRED)

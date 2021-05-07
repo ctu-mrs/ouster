@@ -6,6 +6,19 @@ include(DefaultBuildType)
 # ==== Project Name ====
 project(ouster_ros)
 
+# Override CXX flags inherited from workspace, if precompiled PCL binaries from debian repos are used
+if (DEFINED ENV{PCL_CROSS_COMPILATION})
+  set(PCL_CROSS_COMPILATION $ENV{PCL_CROSS_COMPILATION})
+else()
+  set(PCL_CROSS_COMPILATION "false")
+endif()
+if(${PCL_CROSS_COMPILATION} STREQUAL "false")
+  message("Using precompiled PCL binaries from debian repos. Overriding catkin workspace CMAKE_CXX_FLAGS.")
+  set(CMAKE_CXX_FLAGS "-std=c++17")
+else()
+  message("Using custom-built PCL binaries. Inheriting all CMAKE_CXX_FLAGS from catkin workspace.")
+endif()
+
 # ==== Requirements ====
 find_package(Eigen3 REQUIRED)
 find_package(GLEW REQUIRED)
@@ -28,7 +41,9 @@ find_package(
 
 # ==== Options ====
 set(CMAKE_CXX_STANDARD 17)
-# add_compile_options(-Wall -Wextra)
+add_compile_options(-Wall -Wextra)
+# add_definitions(-fsanitize=address,undefined,alignment,bounds)
+# add_link_options(-fsanitize=address,undefined,alignment,bounds)
 option(CMAKE_POSITION_INDEPENDENT_CODE "Build position independent code." ON)
 
 # ==== Catkin ====
