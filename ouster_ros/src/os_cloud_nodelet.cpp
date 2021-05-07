@@ -140,7 +140,7 @@ int OusterCloudNodelet::run() {
         is_alive_pub_.publish(alive_msg);
 
         /* lidar_pub_.publish(ouster_ros::cloud_to_cloud_msg(cloud, h->timestamp, sensor_frame_)); */
-        ROS_INFO_THROTTLE(3.0, "[OusterCloudNodelet]: publishing point cloud");
+        ROS_INFO_THROTTLE(10.0, "[OusterCloudNodelet]: publishing point cloud");
       }
     }
   };
@@ -151,7 +151,7 @@ int OusterCloudNodelet::run() {
       return;
     }
     imu_pub_.publish(ouster_ros::packet_to_imu_msg(*p, imu_frame_, *pf_ptr_));
-    ROS_INFO_THROTTLE(3.0, "[OusterCloudNodelet]: publishing imu data");
+    ROS_INFO_THROTTLE(10.0, "[OusterCloudNodelet]: publishing imu data");
   };
 
 

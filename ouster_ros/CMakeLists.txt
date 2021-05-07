@@ -40,10 +40,22 @@ find_package(
   nodelet)
 
 # ==== Options ====
+
+# Point Cloud Library: Override CXX flags inherited from catkin workspace, if precompiled PCL binaries from Debian repositories are used
+if (DEFINED ENV{PCL_CROSS_COMPILATION})
+  set(PCL_CROSS_COMPILATION $ENV{PCL_CROSS_COMPILATION})
+else()
+  set(PCL_CROSS_COMPILATION "false")
+endif()
+if(${PCL_CROSS_COMPILATION} STREQUAL "false")
+  message("Using precompiled PCL binaries from Debian repositories. Disabling flag -march=native by overriding catkin workspace CMAKE_CXX_FLAGS.")
+  set(CMAKE_CXX_FLAGS "-std=c++17")
+else()
+  message("Using manually compiled PCL binaries. Inheriting all CMAKE_CXX_FLAGS from catkin workspace.")
+endif()
+
+# add_compile_options(-Wall -Wextra)
 set(CMAKE_CXX_STANDARD 17)
-add_compile_options(-Wall -Wextra)
-# add_definitions(-fsanitize=address,undefined,alignment,bounds)
-# add_link_options(-fsanitize=address,undefined,alignment,bounds)
 option(CMAKE_POSITION_INDEPENDENT_CODE "Build position independent code." ON)
 
 # ==== Catkin ====
