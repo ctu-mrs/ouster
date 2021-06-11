@@ -10,6 +10,7 @@
  */
 
 #include <ros/console.h>
+#include <ros/init.h>
 #include <ros/ros.h>
 
 #include <fstream>
@@ -218,8 +219,9 @@ int OusterNodelet::run() {
 
     if (!cli) {
       ROS_ERROR("[OusterNodelet]: Failed to initialize sensor at: %s", hostname.c_str());
-      return 0;
+      ros::requestShutdown();
     }
+
     ROS_INFO("[OusterNodelet]: Sensor initialized successfully");
 
     // write metadata file to cwd (usually ~/.ros)
