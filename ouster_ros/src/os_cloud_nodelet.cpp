@@ -92,6 +92,12 @@ int OusterCloudNodelet::run() {
   imu_frame_    = tf_prefix + "os_imu";
   lidar_frame_  = tf_prefix + "os_lidar";
 
+  auto fixed_frame = nh.param("fixed_frame_id", std::string{});
+  if (!fixed_frame.empty())
+    fixed_frame = tf_prefix + fixed_frame;
+  tf::TransformListener listener;
+  auto                  waitForTransform = nh.param("wait_for_transform", 0.01);
+
   ouster_ros::OSConfigSrv cfg{};
   auto                    client = nh.serviceClient<ouster_ros::OSConfigSrv>("os_config");
   client.waitForExistence();
@@ -126,7 +132,13 @@ int OusterCloudNodelet::run() {
       auto h = std::find_if(ls_.headers.begin(), ls_.headers.end(), [](const auto& h) { return h.timestamp != std::chrono::nanoseconds{0}; });
       if (h != ls_.headers.end()) {
         Cloud cloud{W_, H_};
-        scan_to_cloud(xyz_lut_, h->timestamp, ls_, cloud);
+
+        if (fixed_frame.empty()) {
+          scan_to_cloud(xyz_lut_, h->timestamp, ls_, cloud);
+        } else {
+          scan_to_cloud(xyz_lut_, h->timestamp, ls_, cloud, listener, fixed_frame, sensor_frame_, waitForTransform);
+        }
+
         sensor_msgs::PointCloud2 msg = ouster_ros::cloud_to_cloud_msg(cloud, h->timestamp, sensor_frame_);
         /* sensor_msgs::PointCloud2 msg = ouster_ros::cloud_to_cloud_msg(cloud, h->timestamp, lidar_frame_); */
         if (use_system_timestamp_) {

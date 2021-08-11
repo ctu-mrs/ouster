@@ -17,6 +17,8 @@
   <arg name="metadata" default="" doc="override default metadata file for replays"/>
 
   <arg name="tf_prefix" default="$(env UAV_NAME)" doc="namespace for tf transforms"/>
+  <arg name="fixed_frame_id" default="$fcu" doc="lidar de-skewing based on motion relative to this fixed frame"/>
+  <arg name="wait_for_transform" default="0.01" doc="maximum time to wait for TF when de-skewing lidar"/>
 
   <arg name="image" default="false" doc="publish range/intensity/ambient image topic"/>
 
@@ -50,6 +52,8 @@
       <remap from="~lidar_packets" to="os_nodelet/lidar_packets"/>
       <remap from="~imu_packets" to="os_nodelet/imu_packets"/>
       <param name="~tf_prefix" value="$(arg tf_prefix)"/>
+      <param name="~/fixed_frame_id" value="$(arg fixed_frame_id)"/>
+      <param name="~/wait_for_transform" value="$(arg wait_for_transform)"/>
       <param name="~use_system_timestamp" value="true"/>
 
     </node>
