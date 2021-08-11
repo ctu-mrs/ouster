@@ -134,8 +134,10 @@ int OusterCloudNodelet::run() {
         Cloud cloud{W_, H_};
 
         if (fixed_frame.empty()) {
+          ROS_INFO("[OusterCloudNodelet]: Using normal scan_to_cloud");
           scan_to_cloud(xyz_lut_, h->timestamp, ls_, cloud);
         } else {
+          ROS_INFO("[OusterCloudNodelet]: Using DESKEWING scan_to_cloud");
           scan_to_cloud(xyz_lut_, h->timestamp, ls_, cloud, listener, fixed_frame, sensor_frame_, waitForTransform);
         }
 
