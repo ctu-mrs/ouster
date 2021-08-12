@@ -3,8 +3,8 @@
   <arg name="UAV_NAME" default="$(env UAV_NAME)" />
 
   <arg name="debug" default="false" />
-  <arg unless="$(arg debug)" name="launch_prefix" value=""/>
-  <arg     if="$(arg debug)" name="launch_prefix" value="debug_roslaunch"/>
+  <arg unless="$(arg debug)" name="launch_prefix_debug" value=""/>
+  <arg     if="$(arg debug)" name="launch_prefix_debug" value="debug_roslaunch"/>
 
   <arg name="sensor_hostname" default="$(env OUSTER_IP)" doc="hostname or IP in dotted decimal form of the sensor"/>
   <arg name="udp_dest" default="$(env OUSTER_UDP_DEST_IP)" doc="hostname or IP where the sensor will send data packets"/>
@@ -17,7 +17,7 @@
   <arg name="metadata" default="" doc="override default metadata file for replays"/>
 
   <arg name="tf_prefix" default="$(env UAV_NAME)" doc="namespace for tf transforms"/>
-  <arg name="fixed_frame_id" default="$fcu" doc="lidar de-skewing based on motion relative to this fixed frame"/>
+  <arg name="fixed_frame_id" default="fcu" doc="lidar de-skewing based on motion relative to this fixed frame"/>
   <arg name="wait_for_transform" default="0.01" doc="maximum time to wait for TF when de-skewing lidar"/>
 
   <arg name="image" default="false" doc="publish range/intensity/ambient image topic"/>
@@ -27,7 +27,7 @@
 
   <group ns="$(arg UAV_NAME)">
 
-    <node pkg="nodelet" type="nodelet" name="os_nodelet" args="$(arg nodelet) ouster_nodelet/OusterNodelet $(arg nodelet_manager)" output="screen" launch-prefix="$(arg launch_prefix)">
+    <node pkg="nodelet" type="nodelet" name="os_nodelet" args="$(arg nodelet) ouster_nodelet/OusterNodelet $(arg nodelet_manager)" output="screen" launch-prefix="$(arg launch_prefix_debug)" >
       <param name="~/sensor_hostname" value="$(arg sensor_hostname)"/>
       <param name="~/udp_dest" value="$(arg udp_dest)"/>
       <param name="~/lidar_mode" type="string" value="$(arg lidar_mode)"/>
@@ -47,7 +47,7 @@
 
     </node>
 
-    <node pkg="nodelet" type="nodelet" name="os_cloud_nodelet" args="$(arg nodelet) ouster_nodelet/OusterCloudNodelet $(arg nodelet_manager)" output="screen" launch-prefix="$(arg launch_prefix)">
+    <node pkg="nodelet" type="nodelet" name="os_cloud_nodelet" args="$(arg nodelet) ouster_nodelet/OusterCloudNodelet $(arg nodelet_manager)" output="screen" launch-prefix="$(arg launch_prefix_debug)">
       <remap from="~os_config" to="os_nodelet/os_config"/>
       <remap from="~lidar_packets" to="os_nodelet/lidar_packets"/>
       <remap from="~imu_packets" to="os_nodelet/imu_packets"/>
@@ -58,7 +58,7 @@
 
     </node>
 
-    <node if="$(arg image)" pkg="nodelet" type="nodelet" name="os_img_nodelet" args="$(arg nodelet) ouster_nodelet/OusterImgNodelet $(arg nodelet_manager)" output="screen" launch-prefix="$(arg launch_prefix)">
+    <node if="$(arg image)" pkg="nodelet" type="nodelet" name="os_img_nodelet" args="$(arg nodelet) ouster_nodelet/OusterImgNodelet $(arg nodelet_manager)" output="screen" launch-prefix="$(arg launch_prefix_debug)">
       <remap from="~os_config" to="os_nodelet/os_config"/>
       <remap from="~points" to="os_cloud_nodelet/points"/>
     </node>

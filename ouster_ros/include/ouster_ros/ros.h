@@ -86,11 +86,10 @@ void scan_to_cloud(const ouster::XYZLut& xyz_lut,
 void scan_to_cloud(const ouster::XYZLut& xyz_lut,
                    ouster::LidarScan::ts_t scan_ts, const ouster::LidarScan& ls,
                    ouster_ros::Cloud& cloud,
-                   tf::TransformListener & listener,
+                   std::shared_ptr<tf::TransformListener> listener,
                    const std::string & fixed_frame,
                    const std::string & sensor_frame,
                    const double & waitForTransform = 0.01);
-
 /**
  * Serialize a PCL point cloud to a ROS message
  * @param cloud the PCL point cloud to convert

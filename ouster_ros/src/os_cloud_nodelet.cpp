@@ -62,9 +62,13 @@ private:
 
   std::unique_ptr<ouster::ScanBatcher> batch_ptr_;
 
+  std::shared_ptr<tf::TransformListener> listener_;
+
   std::string sensor_frame_;
   std::string imu_frame_;
   std::string lidar_frame_;
+  std::string fixed_frame_;
+  double waitForTransform_;
 
   std::thread init_thread_;
   int         run();
@@ -92,11 +96,12 @@ int OusterCloudNodelet::run() {
   imu_frame_    = tf_prefix + "os_imu";
   lidar_frame_  = tf_prefix + "os_lidar";
 
-  auto fixed_frame = nh.param("fixed_frame_id", std::string{});
-  if (!fixed_frame.empty())
-    fixed_frame = tf_prefix + fixed_frame;
-  tf::TransformListener listener;
-  auto                  waitForTransform = nh.param("wait_for_transform", 0.01);
+  listener_ = std::make_shared<tf::TransformListener>();
+
+  fixed_frame_ = nh.param("fixed_frame_id", std::string{});
+  if (!fixed_frame_.empty())
+    fixed_frame_ = tf_prefix + fixed_frame_;
+  waitForTransform_ = nh.param("wait_for_transform", 0.01);
 
   ouster_ros::OSConfigSrv cfg{};
   auto                    client = nh.serviceClient<ouster_ros::OSConfigSrv>("os_config");
@@ -132,13 +137,16 @@ int OusterCloudNodelet::run() {
       auto h = std::find_if(ls_.headers.begin(), ls_.headers.end(), [](const auto& h) { return h.timestamp != std::chrono::nanoseconds{0}; });
       if (h != ls_.headers.end()) {
         Cloud cloud{W_, H_};
+        ROS_INFO_STREAM("[OusterCloudNodelet]: before: ");
+        ROS_INFO_STREAM("[OusterCloudNodelet]: listener: " << listener_->allFramesAsString());
+        ROS_INFO_STREAM("[OusterCloudNodelet]: after: ");
 
-        if (fixed_frame.empty()) {
+        if (fixed_frame_.empty()) {
           ROS_INFO("[OusterCloudNodelet]: Using normal scan_to_cloud");
           scan_to_cloud(xyz_lut_, h->timestamp, ls_, cloud);
         } else {
           ROS_INFO("[OusterCloudNodelet]: Using DESKEWING scan_to_cloud");
-          scan_to_cloud(xyz_lut_, h->timestamp, ls_, cloud, listener, fixed_frame, sensor_frame_, waitForTransform);
+          scan_to_cloud(xyz_lut_, h->timestamp, ls_, cloud, listener_, fixed_frame_, sensor_frame_, waitForTransform_);
         }
 
         sensor_msgs::PointCloud2 msg = ouster_ros::cloud_to_cloud_msg(cloud, h->timestamp, sensor_frame_);
