@@ -310,6 +310,10 @@ int OusterNodelet::run() {
         if (sensor::read_imu_packet(*cli, imu_packet.buf.data(), pf))
           imu_packet_pub.publish(imu_packet);
       }
+      if (state == sensor::TIMEOUT) {
+        ROS_WARN("[OusterNodelet]: poll_client: TIMEOUT");
+      }
+
 
     }
   }
