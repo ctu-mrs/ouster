@@ -312,6 +312,8 @@ int OusterNodelet::run() {
       }
       if (state == sensor::TIMEOUT) {
         ROS_WARN("[OusterNodelet]: poll_client: TIMEOUT");
+        std::string alerts = sensor::get_alerts(*cli, 1);
+        ROS_WARN("[OusterNodelet]: alerts: %s", alerts.c_str());
       }
 
 
