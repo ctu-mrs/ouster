@@ -286,8 +286,9 @@ std::string get_metadata(client& cli, int timeout_sec) {
   return Json::writeString(builder, cli.meta);
 }
 
-std::string get_alerts(client& cli, int timeout_sec) {
-  SOCKET sock_fd = cfg_socket(cli.hostname.c_str());
+/* std::string get_alerts(client& cli, int timeout_sec) { */
+std::string get_alerts(std::string hostname, int timeout_sec) {
+  SOCKET sock_fd = cfg_socket(hostname.c_str());
   if (sock_fd < 0)
     return "";
 

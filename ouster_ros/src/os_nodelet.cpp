@@ -47,12 +47,15 @@ private:
   void populate_metadata_defaults(sensor::sensor_info& info, sensor::lidar_mode specified_lidar_mode);
   void write_metadata(const std::string& meta_file, const std::string& metadata);
   int  run();
+  int  run_alerts_loop();
 
   ros::Publisher sensor_info_publisher_;
   std::thread    connection_loop_;
+  std::thread    alerts_loop_;
+  std::string    hostname_;
 
   std::string published_metadata_;
-  bool is_running_ = true;
+  bool        is_running_ = true;
 };
 
 //}
@@ -183,7 +186,7 @@ int OusterNodelet::run() {
 
     // populate info for config service
     try {
-      auto info          = sensor::metadata_from_json(meta_file);
+      auto info           = sensor::metadata_from_json(meta_file);
       published_metadata_ = to_string(info);
 
       ROS_INFO("[OusterNodelet]: Using lidar_mode: %s", sensor::to_string(info.mode).c_str());
@@ -292,6 +295,9 @@ int OusterNodelet::run() {
     });
     ROS_INFO("[OsNodelet] Service os_config advertised.");
 
+    hostname_ = hostname;
+    alerts_loop_ = std::thread(&OusterNodelet::run_alerts_loop, this);
+
     while (ros::ok() && is_running_) {
       auto state = sensor::poll_client(*cli);
       if (state == sensor::EXIT) {
@@ -312,11 +318,9 @@ int OusterNodelet::run() {
       }
       if (state == sensor::TIMEOUT) {
         ROS_WARN("[OusterNodelet]: poll_client: TIMEOUT");
-        std::string alerts = sensor::get_alerts(*cli, 1);
-        ROS_WARN("[OusterNodelet]: alerts: %s", alerts.c_str());
+        /* std::string alerts = sensor::get_alerts(hostname, 1); */
+        /* ROS_WARN("[OusterNodelet]: alerts: %s", alerts.c_str()); */
       }
-
-
     }
   }
   return EXIT_SUCCESS;
@@ -324,12 +328,25 @@ int OusterNodelet::run() {
 
 //}
 
+/* run_alerts_loop() */
+int OusterNodelet::run_alerts_loop() {
+
+  ROS_INFO("[OsNodelet] Starting alerts loop.");
+
+  while (ros::ok() && is_running_) {
+    std::string alerts = sensor::get_alerts(hostname_, 1);
+    ROS_WARN("[OusterNodelet]: alerts: %s", alerts.c_str());
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+  }
+
+  return EXIT_SUCCESS;
+}
+
 /* onInit() //{ */
 
 void OusterNodelet::onInit() {
 
   connection_loop_ = std::thread(&OusterNodelet::run, this);
-
 }
 
 //}
@@ -339,6 +356,7 @@ void OusterNodelet::onInit() {
 OusterNodelet::~OusterNodelet() {
   is_running_ = false;
   connection_loop_.join();
+  alerts_loop_.join();
 }
 
 /*//}*/
