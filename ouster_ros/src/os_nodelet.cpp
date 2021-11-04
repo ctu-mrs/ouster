@@ -9,6 +9,7 @@
  * imu_port: port to which the sensor should send imu data
  */
 
+#include <chrono>
 #include <ros/console.h>
 #include <ros/init.h>
 #include <ros/ros.h>
@@ -336,7 +337,8 @@ int OusterNodelet::run_alerts_loop() {
   while (ros::ok() && is_running_) {
     std::string alerts = sensor::get_alerts(hostname_, 1);
     ROS_WARN("[OusterNodelet]: alerts: %s", alerts.c_str());
-    std::this_thread::sleep_for(std::chrono::seconds(5));
+    /* std::this_thread::sleep_for(std::chrono::milliseconds(100)); */
+    std::this_thread::sleep_for(std::chrono::seconds(1));
   }
 
   return EXIT_SUCCESS;
