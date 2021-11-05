@@ -85,7 +85,7 @@ catkin_package(
   sensor_msgs
   geometry_msgs
   DEPENDS
-  jsoncpp_lib EIGEN3 GLFW3 GLEW)
+  EIGEN3 GLFW3 GLEW)
 
 # ==== Libraries ====
 # Build static libraries and bundle them into ouster_ros using the `--whole-archive` flag. This is

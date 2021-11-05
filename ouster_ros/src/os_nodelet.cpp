@@ -138,7 +138,7 @@ int OusterNodelet::run() {
   ROS_INFO("[OusterNodelet] Initialization started.");
 
   sensor_info_publisher_ = nh.advertise<mrs_msgs::OusterInfo>("sensor_info", 1, true);
-  alerts_publisher_ = nh.advertise<std_msgs::String>("alerts", 1, true);
+  alerts_publisher_      = nh.advertise<std_msgs::String>("alerts", 1, true);
 
   // empty indicates "not set" since roslaunch xml can't optionally set params
   auto hostname           = nh.param("sensor_hostname", std::string{});
@@ -348,29 +348,36 @@ int OusterNodelet::run_alerts_loop() {
 
     bool success = true;
     success &= reader->parse(alerts.c_str(), alerts.c_str() + alerts.size(), &root, NULL);
-    Json::Value active = root["active"];
 
-    // republish all active alerts to rosconsole
-    for (const auto& alert : active) {
-      if (alert["level"].asString() == "ERROR") {
-        ROS_ERROR_THROTTLE(1.0, "[OusterNodelet] %s %s %s", alert["category"].asString().c_str(), alert["id"].asString().c_str(), alert["msg"].asString().c_str());
-      } else if (alert["level"].asString() == "WARNING") {
-        ROS_WARN_THROTTLE(1.0, "[OusterNodelet] %s %s %s", alert["category"].asString().c_str(), alert["id"].asString().c_str(), alert["msg"].asString().c_str());
-      } else {
-        ROS_INFO_THROTTLE(1.0, "[OusterNodelet] %s %s %s", alert["category"].asString().c_str(), alert["id"].asString().c_str(), alert["msg"].asString().c_str());
+    if (success) {
+      Json::Value active = root["active"];
+      // republish all active alerts to rosconsole
+      for (const auto& alert : active) {
+        if (alert["level"].asString() == "ERROR") {
+          ROS_ERROR_THROTTLE(1.0, "[OusterNodelet] %s %s %s", alert["category"].asString().c_str(), alert["id"].asString().c_str(),
+                             alert["msg"].asString().c_str());
+        } else if (alert["level"].asString() == "WARNING") {
+          ROS_WARN_THROTTLE(1.0, "[OusterNodelet] %s %s %s", alert["category"].asString().c_str(), alert["id"].asString().c_str(),
+                            alert["msg"].asString().c_str());
+        } else {
+          ROS_INFO_THROTTLE(1.0, "[OusterNodelet] %s %s %s", alert["category"].asString().c_str(), alert["id"].asString().c_str(),
+                            alert["msg"].asString().c_str());
+        }
       }
-    }
 
-    Json::Value log = root["log"];
+      Json::Value log = root["log"];
 
-    for (const auto& alert : log) {
-      // publish a message if SHOT_LIMITING appeared in the log
-      if (alert["category"].asString() == "SHOT_LIMITING") {
-        ROS_WARN_ONCE("[OusterNodelet] Alert log contains: %s %s %s", alert["category"].asString().c_str(), alert["id"].asString().c_str(), alert["msg"].asString().c_str());
-      }
-      // publish an error if some error appeared in the log
-      if (alert["level"].asString() == "ERROR") {
-        ROS_ERROR_ONCE("[OusterNodelet] Alert log contains: %s %s %s", alert["category"].asString().c_str(), alert["id"].asString().c_str(), alert["msg"].asString().c_str());
+      for (const auto& alert : log) {
+        // publish a message if SHOT_LIMITING appeared in the log
+        if (alert["category"].asString() == "SHOT_LIMITING") {
+          ROS_WARN_ONCE("[OusterNodelet] Alert log contains: %s %s %s", alert["category"].asString().c_str(), alert["id"].asString().c_str(),
+                        alert["msg"].asString().c_str());
+        }
+        // publish an error if some error appeared in the log
+        if (alert["level"].asString() == "ERROR") {
+          ROS_ERROR_ONCE("[OusterNodelet] Alert log contains: %s %s %s", alert["category"].asString().c_str(), alert["id"].asString().c_str(),
+                         alert["msg"].asString().c_str());
+        }
       }
     }
 
