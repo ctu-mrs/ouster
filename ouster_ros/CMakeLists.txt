@@ -23,6 +23,7 @@ endif()
 find_package(Eigen3 REQUIRED)
 find_package(GLEW REQUIRED)
 find_package(glfw3 REQUIRED)
+find_package(jsoncpp REQUIRED)
 
 find_package(
   catkin REQUIRED
@@ -84,7 +85,7 @@ catkin_package(
   sensor_msgs
   geometry_msgs
   DEPENDS
-  EIGEN3 GLFW3 GLEW)
+  jsoncpp_lib EIGEN3 GLFW3 GLEW)
 
 # ==== Libraries ====
 # Build static libraries and bundle them into ouster_ros using the `--whole-archive` flag. This is
@@ -110,7 +111,7 @@ target_link_libraries(OusterCloudNodelet ouster_ros ${catkin_LIBRARIES})
 add_dependencies(OusterCloudNodelet ${PROJECT_NAME}_gencpp)
 
 add_library(OusterNodelet src/os_nodelet.cpp)
-target_link_libraries(OusterNodelet ouster_ros ${catkin_LIBRARIES})
+target_link_libraries(OusterNodelet ouster_ros ${catkin_LIBRARIES} jsoncpp_lib)
 add_dependencies(OusterNodelet ${PROJECT_NAME}_gencpp)
 
 add_library(OusterImgNodelet src/img_nodelet.cpp)

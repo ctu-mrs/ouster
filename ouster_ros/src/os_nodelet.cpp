@@ -29,6 +29,8 @@
 #include <pluginlib/class_list_macros.h>
 #include <mrs_msgs/OusterInfo.h>
 
+#include <json/json.h>
+
 using PacketMsg   = ouster_ros::PacketMsg;
 using OSConfigSrv = ouster_ros::OSConfigSrv;
 namespace sensor  = ouster::sensor;
@@ -337,6 +339,34 @@ int OusterNodelet::run_alerts_loop() {
   while (ros::ok() && is_running_) {
     std::string alerts = sensor::get_alerts(hostname_, 1);
     ROS_WARN("[OusterNodelet]: alerts: %s", alerts.c_str());
+
+    Json::CharReaderBuilder builder{};
+    auto                    reader = std::unique_ptr<Json::CharReader>{builder.newCharReader()};
+    Json::Value             root{};
+    std::string             errors{};
+
+    bool success = true;
+    success &= reader->parse(alerts.c_str(), alerts.c_str() + alerts.size(), &root, NULL);
+    Json::Value log = root["log"];
+
+    if (root["active"].asString() != ""){
+      ROS_WARN_THROTTLE(1.0, "[OusterNodelet] Ouster alert: %s", root["active"].asString().c_str());
+    }
+
+    for (const auto& alert : log) {
+      if (alert["active"].asString() == "true"){
+        std::cout << alert << std::endl;
+      }
+    }
+    /* std::cout << root["log"] << std::endl; */
+    /* const std::vector<std::string>& members = root.getMemberNames(); */
+    /* for (const auto& key : members) { */
+      /* dst[key] = src[key]; */
+      /* std::cout << key.c_str() << std::endl; */
+    /* } */
+
+    /* } while (success && root["status"].asString() == "INITIALIZING"); */
+
     /* std::this_thread::sleep_for(std::chrono::milliseconds(100)); */
     std::this_thread::sleep_for(std::chrono::seconds(1));
   }
