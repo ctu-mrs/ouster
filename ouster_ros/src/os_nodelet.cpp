@@ -30,6 +30,7 @@
 #include <mrs_msgs/OusterInfo.h>
 
 #include <json/json.h>
+#include <std_msgs/String.h>
 
 using PacketMsg   = ouster_ros::PacketMsg;
 using OSConfigSrv = ouster_ros::OSConfigSrv;
@@ -53,6 +54,7 @@ private:
   int  run_alerts_loop();
 
   ros::Publisher sensor_info_publisher_;
+  ros::Publisher alerts_publisher_;
   std::thread    connection_loop_;
   std::thread    alerts_loop_;
   std::string    hostname_;
@@ -136,6 +138,7 @@ int OusterNodelet::run() {
   ROS_INFO("[OusterNodelet] Initialization started.");
 
   sensor_info_publisher_ = nh.advertise<mrs_msgs::OusterInfo>("sensor_info", 1, true);
+  alerts_publisher_ = nh.advertise<std_msgs::String>("alerts", 1, true);
 
   // empty indicates "not set" since roslaunch xml can't optionally set params
   auto hostname           = nh.param("sensor_hostname", std::string{});
@@ -298,7 +301,7 @@ int OusterNodelet::run() {
     });
     ROS_INFO("[OsNodelet] Service os_config advertised.");
 
-    hostname_ = hostname;
+    hostname_    = hostname;
     alerts_loop_ = std::thread(&OusterNodelet::run_alerts_loop, this);
 
     while (ros::ok() && is_running_) {
@@ -331,45 +334,54 @@ int OusterNodelet::run() {
 
 //}
 
-/* run_alerts_loop() */
+/* run_alerts_loop() */ /*//{*/
 int OusterNodelet::run_alerts_loop() {
 
   ROS_INFO("[OsNodelet] Starting alerts loop.");
 
   while (ros::ok() && is_running_) {
-    std::string alerts = sensor::get_alerts(hostname_, 1);
-    ROS_WARN("[OusterNodelet]: alerts: %s", alerts.c_str());
+    std::string alerts = sensor::get_alerts(hostname_);
 
     Json::CharReaderBuilder builder{};
     auto                    reader = std::unique_ptr<Json::CharReader>{builder.newCharReader()};
     Json::Value             root{};
-    std::string             errors{};
 
     bool success = true;
     success &= reader->parse(alerts.c_str(), alerts.c_str() + alerts.size(), &root, NULL);
-    Json::Value log = root["log"];
+    Json::Value active = root["active"];
 
-    if (root["active"].asString() != ""){
-      ROS_WARN_THROTTLE(1.0, "[OusterNodelet] Ouster alert: %s", root["active"].asString().c_str());
-    }
-
-    for (const auto& alert : log) {
-      if (alert["active"].asString() == "true"){
-        std::cout << alert << std::endl;
+    // republish all active alerts to rosconsole
+    for (const auto& alert : active) {
+      if (alert["level"].asString() == "ERROR") {
+        ROS_ERROR_THROTTLE(1.0, "[OusterNodelet] %s %s %s", alert["category"].asString().c_str(), alert["id"].asString().c_str(), alert["msg"].asString().c_str());
+      } else if (alert["level"].asString() == "WARNING") {
+        ROS_WARN_THROTTLE(1.0, "[OusterNodelet] %s %s %s", alert["category"].asString().c_str(), alert["id"].asString().c_str(), alert["msg"].asString().c_str());
+      } else {
+        ROS_INFO_THROTTLE(1.0, "[OusterNodelet] %s %s %s", alert["category"].asString().c_str(), alert["id"].asString().c_str(), alert["msg"].asString().c_str());
       }
     }
-    /* std::cout << root["log"] << std::endl; */
-    /* const std::vector<std::string>& members = root.getMemberNames(); */
-    /* for (const auto& key : members) { */
-      /* dst[key] = src[key]; */
-      /* std::cout << key.c_str() << std::endl; */
-    /* } */
 
-    /* } while (success && root["status"].asString() == "INITIALIZING"); */
+    Json::Value log = root["log"];
 
-    /* std::this_thread::sleep_for(std::chrono::milliseconds(100)); */
+    for (const auto& alert : log) {
+      // publish a message if SHOT_LIMITING appeared in the log
+      if (alert["category"].asString() == "SHOT_LIMITING") {
+        ROS_WARN_ONCE("[OusterNodelet] Alert log contains: %s %s %s", alert["category"].asString().c_str(), alert["id"].asString().c_str(), alert["msg"].asString().c_str());
+      }
+      // publish an error if some error appeared in the log
+      if (alert["level"].asString() == "ERROR") {
+        ROS_ERROR_ONCE("[OusterNodelet] Alert log contains: %s %s %s", alert["category"].asString().c_str(), alert["id"].asString().c_str(), alert["msg"].asString().c_str());
+      }
+    }
+
+    // publish all the obtained alerts to a topic for logging to rosbag
+    std_msgs::String alerts_msg;
+    alerts_msg.data = alerts;
+    alerts_publisher_.publish(alerts_msg);
+
     std::this_thread::sleep_for(std::chrono::seconds(1));
   }
+  /*//}*/
 
   return EXIT_SUCCESS;
 }

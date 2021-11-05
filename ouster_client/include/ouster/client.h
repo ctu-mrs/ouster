@@ -100,7 +100,13 @@ bool read_imu_packet(const client& cli, uint8_t* buf, const packet_format& pf);
  */
 std::string get_metadata(client& cli, int timeout_sec = 30);
 
-std::string get_alerts(std::string hostname, int timeout_sec = 1);
+/**
+ * Get diagnostic alerts from the sensor.
+ *
+ * @param hostname hostname of the sensor
+ * @return a text blob of the alerts
+ */
+std::string get_alerts(std::string hostname);
 
 }  // namespace sensor
 }  // namespace ouster

@@ -286,49 +286,20 @@ std::string get_metadata(client& cli, int timeout_sec) {
   return Json::writeString(builder, cli.meta);
 }
 
-/* std::string get_alerts(client& cli, int timeout_sec) { */
-std::string get_alerts(std::string hostname, int timeout_sec) {
+std::string get_alerts(std::string hostname) {
   SOCKET sock_fd = cfg_socket(hostname.c_str());
   if (sock_fd < 0)
     return "";
 
-  /* Json::CharReaderBuilder builder{}; */
-  /* auto                    reader = std::unique_ptr<Json::CharReader>{builder.newCharReader()}; */
-  /* Json::Value             root{}; */
-  /* std::string             errors{}; */
-
-  /* bool success = collect_metadata(cli, sock_fd, chrono::seconds{timeout_sec}); */
   std::string res;
   bool        success = true;
   success &= do_tcp_cmd(sock_fd, {"get_alerts"}, res);
-
-  /* success &= reader->parse(res.c_str(), res.c_str() + res.size(), &root, NULL); */
-  /* Json::Value log = root["log"]; */
-
-  /* for (const auto& alert : log) { */
-  /*   if (alert["active"].asString() == "true"){ */
-  /*     std::cout << alert << std::endl; */
-  /*   } */
-  /* } */
-  /* std::cout << root["log"] << std::endl; */
-  /* const std::vector<std::string>& members = root.getMemberNames(); */
-  /* for (const auto& key : members) { */
-    /* dst[key] = src[key]; */
-    /* std::cout << key.c_str() << std::endl; */
-  /* } */
-
-  /* } while (success && root["status"].asString() == "INITIALIZING"); */
 
   impl::socket_close(sock_fd);
 
   if (!success)
     return "";
 
-  /* Json::StreamWriterBuilder builder; */
-  /* builder["enableYAMLCompatibility"] = true; */
-  /* builder["precision"]               = 6; */
-  /* builder["indentation"]             = "    "; */
-  /* return Json::writeString(builder, cli.meta); */
   return res;
 }
 
