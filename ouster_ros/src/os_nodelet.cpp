@@ -354,13 +354,13 @@ int OusterNodelet::run_alerts_loop() {
       // republish all active alerts to rosconsole
       for (const auto& alert : active) {
         if (alert["level"].asString() == "ERROR") {
-          ROS_ERROR_THROTTLE(1.0, "[OusterNodelet] %s %s %s", alert["category"].asString().c_str(), alert["id"].asString().c_str(),
+          ROS_ERROR("[OusterNodelet] %s %s %s", alert["category"].asString().c_str(), alert["id"].asString().c_str(),
                              alert["msg"].asString().c_str());
         } else if (alert["level"].asString() == "WARNING") {
-          ROS_WARN_THROTTLE(1.0, "[OusterNodelet] %s %s %s", alert["category"].asString().c_str(), alert["id"].asString().c_str(),
+          ROS_WARN("[OusterNodelet] %s %s %s", alert["category"].asString().c_str(), alert["id"].asString().c_str(),
                             alert["msg"].asString().c_str());
         } else {
-          ROS_INFO_THROTTLE(1.0, "[OusterNodelet] %s %s %s", alert["category"].asString().c_str(), alert["id"].asString().c_str(),
+          ROS_INFO("[OusterNodelet] %s %s %s", alert["category"].asString().c_str(), alert["id"].asString().c_str(),
                             alert["msg"].asString().c_str());
         }
       }
