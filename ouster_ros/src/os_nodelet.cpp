@@ -251,6 +251,9 @@ int OusterNodelet::run() {
     ouster_info.beam_azimuth_angles            = info.beam_azimuth_angles;
     ouster_info.beam_altitude_angles           = info.beam_altitude_angles;
     ouster_info.lidar_origin_to_beam_origin_mm = info.lidar_origin_to_beam_origin_mm;
+    ouster_info.pixels_per_column = info.format.pixels_per_column;
+    ouster_info.columns_per_frame = info.format.columns_per_frame;
+    ouster_info.pixel_shift_by_row = info.format.pixel_shift_by_row;
 
     info.imu_to_sensor_transform.transposeInPlace();
     info.lidar_to_sensor_transform.transposeInPlace();
