@@ -42,6 +42,7 @@
       <remap from="~lidar_packets" to="~lidar_packets" />
       <remap from="~imu_packets" to="~imu_packets" />
       <remap from="~sensor_info" to="~sensor_info" />
+      <remap from="~uav_status" to="mrs_uav_status/display_string" />
 
     </node>
 

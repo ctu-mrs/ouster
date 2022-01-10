@@ -55,6 +55,7 @@ private:
 
   ros::Publisher sensor_info_publisher_;
   ros::Publisher alerts_publisher_;
+  ros::Publisher alerts_publisher_uav_status_;
   std::thread    connection_loop_;
   std::thread    alerts_loop_;
   std::string    hostname_;
@@ -137,8 +138,9 @@ int OusterNodelet::run() {
 
   ROS_INFO("[OusterNodelet] Initialization started.");
 
-  sensor_info_publisher_ = nh.advertise<mrs_msgs::OusterInfo>("sensor_info", 1, true);
-  alerts_publisher_      = nh.advertise<std_msgs::String>("alerts", 1, true);
+  sensor_info_publisher_       = nh.advertise<mrs_msgs::OusterInfo>("sensor_info", 1, true);
+  alerts_publisher_            = nh.advertise<std_msgs::String>("alerts", 1, true);
+  alerts_publisher_uav_status_ = nh.advertise<std_msgs::String>("uav_status", 1, true);
 
   // empty indicates "not set" since roslaunch xml can't optionally set params
   auto hostname           = nh.param("sensor_hostname", std::string{});
@@ -251,9 +253,9 @@ int OusterNodelet::run() {
     ouster_info.beam_azimuth_angles            = info.beam_azimuth_angles;
     ouster_info.beam_altitude_angles           = info.beam_altitude_angles;
     ouster_info.lidar_origin_to_beam_origin_mm = info.lidar_origin_to_beam_origin_mm;
-    ouster_info.pixels_per_column = info.format.pixels_per_column;
-    ouster_info.columns_per_frame = info.format.columns_per_frame;
-    ouster_info.pixel_shift_by_row = info.format.pixel_shift_by_row;
+    ouster_info.pixels_per_column              = info.format.pixels_per_column;
+    ouster_info.columns_per_frame              = info.format.columns_per_frame;
+    ouster_info.pixel_shift_by_row             = info.format.pixel_shift_by_row;
 
     info.imu_to_sensor_transform.transposeInPlace();
     info.lidar_to_sensor_transform.transposeInPlace();
@@ -327,8 +329,9 @@ int OusterNodelet::run() {
       }
       if (state == sensor::TIMEOUT) {
         ROS_WARN("[OusterNodelet]: poll_client: TIMEOUT");
-        /* std::string alerts = sensor::get_alerts(hostname, 1); */
-        /* ROS_WARN("[OusterNodelet]: alerts: %s", alerts.c_str()); */
+        std_msgs::String status_msg;
+        status_msg.data = "-R Ouster TIMEOUT";
+        alerts_publisher_uav_status_.publish(status_msg);
       }
     }
   }
@@ -355,16 +358,32 @@ int OusterNodelet::run_alerts_loop() {
     if (success) {
       Json::Value active = root["active"];
       // republish all active alerts to rosconsole
+      // publish info about the highest level alert to mrs_uav_status
+      bool status_published = false;
       for (const auto& alert : active) {
         if (alert["level"].asString() == "ERROR") {
-          ROS_ERROR("[OusterNodelet] %s %s %s", alert["category"].asString().c_str(), alert["id"].asString().c_str(),
-                             alert["msg"].asString().c_str());
+          ROS_ERROR("[OusterNodelet] %s %s %s", alert["category"].asString().c_str(), alert["id"].asString().c_str(), alert["msg"].asString().c_str());
+          // publish msg to mrs_uav_status
+          std_msgs::String status_msg;
+          status_msg.data = "-R Ouster " + alert["category"].asString();
+          alerts_publisher_uav_status_.publish(status_msg);
+          status_published = true;
         } else if (alert["level"].asString() == "WARNING") {
-          ROS_WARN("[OusterNodelet] %s %s %s", alert["category"].asString().c_str(), alert["id"].asString().c_str(),
-                            alert["msg"].asString().c_str());
+          ROS_WARN("[OusterNodelet] %s %s %s", alert["category"].asString().c_str(), alert["id"].asString().c_str(), alert["msg"].asString().c_str());
+          if (!status_published) {
+            std_msgs::String status_msg;
+            status_msg.data = "-Y Ouster " + alert["category"].asString();
+            alerts_publisher_uav_status_.publish(status_msg);
+            status_published = true;
+          }
         } else {
-          ROS_INFO("[OusterNodelet] %s %s %s", alert["category"].asString().c_str(), alert["id"].asString().c_str(),
-                            alert["msg"].asString().c_str());
+          ROS_INFO("[OusterNodelet] %s %s %s", alert["category"].asString().c_str(), alert["id"].asString().c_str(), alert["msg"].asString().c_str());
+          if (!status_published) {
+            std_msgs::String status_msg;
+            status_msg.data = "Ouster " + alert["category"].asString();
+            alerts_publisher_uav_status_.publish(status_msg);
+            status_published = true;
+          }
         }
       }
 
