@@ -140,7 +140,7 @@ int OusterNodelet::run() {
 
   sensor_info_publisher_       = nh.advertise<mrs_msgs::OusterInfo>("sensor_info", 1, true);
   alerts_publisher_            = nh.advertise<std_msgs::String>("alerts", 1, true);
-  alerts_publisher_uav_status_ = nh.advertise<std_msgs::String>("uav_status", 1, true);
+  alerts_publisher_uav_status_ = nh.advertise<std_msgs::String>("uav_status", 1, false);
 
   // empty indicates "not set" since roslaunch xml can't optionally set params
   auto hostname           = nh.param("sensor_hostname", std::string{});
@@ -328,7 +328,7 @@ int OusterNodelet::run() {
           imu_packet_pub.publish(imu_packet);
       }
       if (state == sensor::TIMEOUT) {
-        ROS_WARN("[OusterNodelet]: poll_client: TIMEOUT");
+        ROS_WARN("[OusterNodelet]: poll_client: TIMEOUT (check Ethernet connection)");
         std_msgs::String status_msg;
         status_msg.data = "-R Ouster TIMEOUT";
         alerts_publisher_uav_status_.publish(status_msg);
