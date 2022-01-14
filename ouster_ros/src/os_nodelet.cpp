@@ -9,6 +9,7 @@
  * imu_port: port to which the sensor should send imu data
  */
 
+#include <chrono>
 #include <ros/console.h>
 #include <ros/init.h>
 #include <ros/ros.h>
@@ -27,6 +28,9 @@
 #include <nodelet/nodelet.h>
 #include <pluginlib/class_list_macros.h>
 #include <mrs_msgs/OusterInfo.h>
+
+#include <json/json.h>
+#include <std_msgs/String.h>
 
 using PacketMsg   = ouster_ros::PacketMsg;
 using OSConfigSrv = ouster_ros::OSConfigSrv;
@@ -47,12 +51,17 @@ private:
   void populate_metadata_defaults(sensor::sensor_info& info, sensor::lidar_mode specified_lidar_mode);
   void write_metadata(const std::string& meta_file, const std::string& metadata);
   int  run();
+  int  run_alerts_loop();
 
   ros::Publisher sensor_info_publisher_;
+  ros::Publisher alerts_publisher_;
+  ros::Publisher alerts_publisher_uav_status_;
   std::thread    connection_loop_;
+  std::thread    alerts_loop_;
+  std::string    hostname_;
 
   std::string published_metadata_;
-  bool is_running_ = true;
+  bool        is_running_ = true;
 };
 
 //}
@@ -129,7 +138,9 @@ int OusterNodelet::run() {
 
   ROS_INFO("[OusterNodelet] Initialization started.");
 
-  sensor_info_publisher_ = nh.advertise<mrs_msgs::OusterInfo>("sensor_info", 1, true);
+  sensor_info_publisher_       = nh.advertise<mrs_msgs::OusterInfo>("sensor_info", 1, true);
+  alerts_publisher_            = nh.advertise<std_msgs::String>("alerts", 1, true);
+  alerts_publisher_uav_status_ = nh.advertise<std_msgs::String>("uav_status", 1, false);
 
   // empty indicates "not set" since roslaunch xml can't optionally set params
   auto hostname           = nh.param("sensor_hostname", std::string{});
@@ -183,7 +194,7 @@ int OusterNodelet::run() {
 
     // populate info for config service
     try {
-      auto info          = sensor::metadata_from_json(meta_file);
+      auto info           = sensor::metadata_from_json(meta_file);
       published_metadata_ = to_string(info);
 
       ROS_INFO("[OusterNodelet]: Using lidar_mode: %s", sensor::to_string(info.mode).c_str());
@@ -242,6 +253,9 @@ int OusterNodelet::run() {
     ouster_info.beam_azimuth_angles            = info.beam_azimuth_angles;
     ouster_info.beam_altitude_angles           = info.beam_altitude_angles;
     ouster_info.lidar_origin_to_beam_origin_mm = info.lidar_origin_to_beam_origin_mm;
+    ouster_info.pixels_per_column              = info.format.pixels_per_column;
+    ouster_info.columns_per_frame              = info.format.columns_per_frame;
+    ouster_info.pixel_shift_by_row             = info.format.pixel_shift_by_row;
 
     info.imu_to_sensor_transform.transposeInPlace();
     info.lidar_to_sensor_transform.transposeInPlace();
@@ -292,6 +306,9 @@ int OusterNodelet::run() {
     });
     ROS_INFO("[OsNodelet] Service os_config advertised.");
 
+    hostname_    = hostname;
+    alerts_loop_ = std::thread(&OusterNodelet::run_alerts_loop, this);
+
     while (ros::ok() && is_running_) {
       auto state = sensor::poll_client(*cli);
       if (state == sensor::EXIT) {
@@ -310,7 +327,12 @@ int OusterNodelet::run() {
         if (sensor::read_imu_packet(*cli, imu_packet.buf.data(), pf))
           imu_packet_pub.publish(imu_packet);
       }
-
+      if (state == sensor::TIMEOUT) {
+        ROS_WARN("[OusterNodelet]: poll_client: TIMEOUT (check Ethernet connection)");
+        std_msgs::String status_msg;
+        status_msg.data = "-R Ouster TIMEOUT";
+        alerts_publisher_uav_status_.publish(status_msg);
+      }
     }
   }
   return EXIT_SUCCESS;
@@ -318,12 +340,86 @@ int OusterNodelet::run() {
 
 //}
 
+/* run_alerts_loop() */ /*//{*/
+int OusterNodelet::run_alerts_loop() {
+
+  ROS_INFO("[OsNodelet] Starting alerts loop.");
+
+  while (ros::ok() && is_running_) {
+    std::string alerts = sensor::get_alerts(hostname_);
+
+    Json::CharReaderBuilder builder{};
+    auto                    reader = std::unique_ptr<Json::CharReader>{builder.newCharReader()};
+    Json::Value             root{};
+
+    bool success = true;
+    success &= reader->parse(alerts.c_str(), alerts.c_str() + alerts.size(), &root, NULL);
+
+    if (success) {
+      Json::Value active = root["active"];
+      // republish all active alerts to rosconsole
+      // publish info about the highest level alert to mrs_uav_status
+      bool status_published = false;
+      for (const auto& alert : active) {
+        if (alert["level"].asString() == "ERROR") {
+          ROS_ERROR("[OusterNodelet] %s %s %s", alert["category"].asString().c_str(), alert["id"].asString().c_str(), alert["msg"].asString().c_str());
+          // publish msg to mrs_uav_status
+          std_msgs::String status_msg;
+          status_msg.data = "-R Ouster " + alert["category"].asString();
+          alerts_publisher_uav_status_.publish(status_msg);
+          status_published = true;
+        } else if (alert["level"].asString() == "WARNING") {
+          ROS_WARN("[OusterNodelet] %s %s %s", alert["category"].asString().c_str(), alert["id"].asString().c_str(), alert["msg"].asString().c_str());
+          if (!status_published) {
+            std_msgs::String status_msg;
+            status_msg.data = "-Y Ouster " + alert["category"].asString();
+            alerts_publisher_uav_status_.publish(status_msg);
+            status_published = true;
+          }
+        } else {
+          ROS_INFO("[OusterNodelet] %s %s %s", alert["category"].asString().c_str(), alert["id"].asString().c_str(), alert["msg"].asString().c_str());
+          if (!status_published) {
+            std_msgs::String status_msg;
+            status_msg.data = "Ouster " + alert["category"].asString();
+            alerts_publisher_uav_status_.publish(status_msg);
+            status_published = true;
+          }
+        }
+      }
+
+      Json::Value log = root["log"];
+
+      for (const auto& alert : log) {
+        // publish a message if SHOT_LIMITING appeared in the log
+        if (alert["category"].asString() == "SHOT_LIMITING") {
+          ROS_WARN_ONCE("[OusterNodelet] Alert log contains: %s %s %s", alert["category"].asString().c_str(), alert["id"].asString().c_str(),
+                        alert["msg"].asString().c_str());
+        }
+        // publish an error if some error appeared in the log
+        if (alert["level"].asString() == "ERROR") {
+          ROS_ERROR_ONCE("[OusterNodelet] Alert log contains: %s %s %s", alert["category"].asString().c_str(), alert["id"].asString().c_str(),
+                         alert["msg"].asString().c_str());
+        }
+      }
+    }
+
+    // publish all the obtained alerts to a topic for logging to rosbag
+    std_msgs::String alerts_msg;
+    alerts_msg.data = alerts;
+    alerts_publisher_.publish(alerts_msg);
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+  }
+  /*//}*/
+
+  return EXIT_SUCCESS;
+}
+
 /* onInit() //{ */
 
 void OusterNodelet::onInit() {
 
   connection_loop_ = std::thread(&OusterNodelet::run, this);
-
 }
 
 //}
@@ -333,6 +429,7 @@ void OusterNodelet::onInit() {
 OusterNodelet::~OusterNodelet() {
   is_running_ = false;
   connection_loop_.join();
+  alerts_loop_.join();
 }
 
 /*//}*/
