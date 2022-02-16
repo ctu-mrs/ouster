@@ -72,7 +72,7 @@ set(LIBRARIES
   )
 
 catkin_package(
-  INCLUDE_DIRS
+  INCLUDE_DIRS include
 
   LIBRARIES ${LIBRARIES}
 
@@ -98,7 +98,10 @@ set(BUILD_SHARED_LIBS OFF)
 set(BUILD_SHARED_LIBS ${_SAVE_BUILD_SHARED_LIBS})
 
 # catkin adds all include dirs to a single variable, don't try to use targets
-include_directories(SYSTEM ${catkin_INCLUDE_DIRS})
+include_directories(
+  include
+  SYSTEM ${catkin_INCLUDE_DIRS}
+)
 
 add_library(ouster_ros src/ros.cpp)
 target_link_libraries(ouster_ros PUBLIC ${catkin_LIBRARIES})
