@@ -12,12 +12,12 @@
 #include <thread>
 #include <vector>
 
-#include "ouster/build.h"
-#include "ouster/client.h"
-#include "ouster/lidar_scan.h"
-#include "ouster/lidar_scan_viz.h"
-#include "ouster/point_viz.h"
-#include "ouster/types.h"
+#include <ouster/build.h>
+#include <ouster/client.h>
+#include <ouster/lidar_scan.h>
+#include <ouster/lidar_scan_viz.h>
+#include <ouster/point_viz.h>
+#include <ouster/types.h>
 
 namespace sensor = ouster::sensor;
 namespace viz = ouster::viz;

@@ -26,8 +26,10 @@ find_package(glfw3 REQUIRED)
 find_package(jsoncpp REQUIRED)
 
 find_package(
-  catkin REQUIRED
-  COMPONENTS message_generation
+  catkin REQUIRED COMPONENTS
+  message_generation
+  ouster_client
+  ouster_viz
   std_msgs
   mrs_msgs
   sensor_msgs
@@ -38,7 +40,8 @@ find_package(
   tf2
   tf2_ros
   tf2_geometry_msgs
-  nodelet)
+  nodelet
+)
 
 # ==== Options ====
 
@@ -64,17 +67,14 @@ add_message_files(FILES PacketMsg.msg)
 add_service_files(FILES OSConfigSrv.srv)
 generate_messages(DEPENDENCIES std_msgs sensor_msgs geometry_msgs)
 
-set(_ouster_ros_INCLUDE_DIRS "include;../ouster_client/include;../ouster_viz/include")
+set(LIBRARIES
+  ouster_ros OusterCloudNodelet OusterNodelet OusterImgNodelet
+  )
 
 catkin_package(
   INCLUDE_DIRS
-  ${_ouster_ros_INCLUDE_DIRS}
 
-  LIBRARIES
-  ouster_ros
-  OusterNodelet
-  OusterCloudNodelet
-  OusterImgNodelet
+  LIBRARIES ${LIBRARIES}
 
   CATKIN_DEPENDS
   roscpp
@@ -84,6 +84,8 @@ catkin_package(
   mrs_msgs
   sensor_msgs
   geometry_msgs
+  ouster_client
+  ouster_viz
   DEPENDS
   EIGEN3 GLFW3 GLEW)
 
@@ -93,16 +95,13 @@ catkin_package(
 # libraries are the recommended way to do this, but require >=3.13 to propagate usage requirements.
 set(_SAVE_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
 set(BUILD_SHARED_LIBS OFF)
-add_subdirectory(../ouster_client ouster_client EXCLUDE_FROM_ALL)
-add_subdirectory(../ouster_viz ouster_viz EXCLUDE_FROM_ALL)
 set(BUILD_SHARED_LIBS ${_SAVE_BUILD_SHARED_LIBS})
 
 # catkin adds all include dirs to a single variable, don't try to use targets
-include_directories(${_ouster_ros_INCLUDE_DIRS} SYSTEM ${catkin_INCLUDE_DIRS})
+include_directories(SYSTEM ${catkin_INCLUDE_DIRS})
 
 add_library(ouster_ros src/ros.cpp)
-target_link_libraries(ouster_ros PUBLIC ${catkin_LIBRARIES} ouster_build PRIVATE
-  -Wl,--whole-archive ouster_client ouster_viz -Wl,--no-whole-archive)
+target_link_libraries(ouster_ros PUBLIC ${catkin_LIBRARIES})
 add_dependencies(ouster_ros ${PROJECT_NAME}_gencpp)
 
 # ==== Executables ====
@@ -118,13 +117,25 @@ add_library(OusterImgNodelet src/img_nodelet.cpp)
 target_link_libraries(OusterImgNodelet ouster_ros ${catkin_LIBRARIES})
 add_dependencies(OusterImgNodelet ${PROJECT_NAME}_gencpp)
 
-# # ==== Install ====
-# install(
-#   TARGETS ouster_ros OusterNodelet OusterCloudNodelet viz_node img_node
-#   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
-# install(
-#   DIRECTORY ${_ouster_ros_INCLUDE_DIRS}
-#   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
-# install(FILES ouster.launch DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+## --------------------------------------------------------------
+## |                           Install                          |
+## --------------------------------------------------------------
+
+install(TARGETS ${LIBRARIES}
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
+  )
+
+install(DIRECTORY include/
+  DESTINATION ${CATKIN_GLOBAL_INCLUDE_DESTINATION}
+  )
+
+install(DIRECTORY launch
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+  )
+
+install(DIRECTORY ./
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+  FILES_MATCHING PATTERN "*.xml"
+  )

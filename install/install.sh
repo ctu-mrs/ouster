@@ -6,7 +6,7 @@ trap 'last_command=$current_command; current_command=$BASH_COMMAND' DEBUG
 trap 'echo "$0: \"${last_command}\" command failed with exit code $?"' ERR
 
 sudo apt -y update
-sudo apt -y install libglew-dev libglfw3-dev httpie
+sudo apt -y install libglew-dev libglfw3-dev httpie libtclap-dev
 
 num=`cat ~/.bashrc | grep "OUSTER_IP" | wc -l`
 if [ "$num" -lt "1" ]; then
