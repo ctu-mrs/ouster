@@ -69,7 +69,6 @@ add_library(ouster_build INTERFACE)
 
 target_include_directories(ouster_build
   INTERFACE
-  ${CMAKE_CURRENT_BINARY_DIR}/include
   ${OUSTER_HDR_PATH}
   ${catkin_INCLUDE_DIRS}
   )
