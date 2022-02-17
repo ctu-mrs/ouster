@@ -3,10 +3,10 @@
 #include <iostream>
 #include <vector>
 
-#include "ouster/build.h"
-#include "ouster/client.h"
-#include "ouster/lidar_scan.h"
-#include "ouster/types.h"
+#include <ouster/build.h>
+#include <ouster/client.h>
+#include <ouster/lidar_scan.h>
+#include <ouster/types.h>
 
 using namespace ouster;
 

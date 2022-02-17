@@ -34,16 +34,14 @@ set(EXECUTABLES
   ouster_client_example
   )
 
-catkin_package(
-  INCLUDE_DIRS include
-  LIBRARIES ${LIBRARIES}
-  CATKIN_DEPENDS roscpp
-  )
+catkin_destinations()
+set(OUSTER_HDR_PATH ${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_INCLUDE_DESTINATION})
+file(MAKE_DIRECTORY ${OUSTER_HDR_PATH}/ouster)
 
 # ==== Build Metadata Target ====
 add_custom_target(generate_build_header)
 add_custom_command(TARGET generate_build_header PRE_BUILD
-  COMMAND ${CMAKE_COMMAND} -DVERSION_GEN_OUT_DIR="${CMAKE_CURRENT_BINARY_DIR}/include/ouster"
+  COMMAND ${CMAKE_COMMAND} -DVERSION_GEN_OUT_DIR="${OUSTER_HDR_PATH}/ouster"
   -DVERSION_GEN_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/.."
   -DBUILD_TYPE="${CMAKE_BUILD_TYPE}"
   -DBUILD_SYSTEM="${CMAKE_SYSTEM_NAME}"
@@ -51,21 +49,98 @@ add_custom_command(TARGET generate_build_header PRE_BUILD
   -Douster_client_VERSION_SUFFIX="${ouster_client_VERSION_SUFFIX}"
   -P ${CMAKE_CURRENT_SOURCE_DIR}/../cmake/VersionGen.cmake)
 
+set(${PROJECT_NAME}_EXPORTED_TARGETS generate_build_header)
+
+catkin_package(
+  INCLUDE_DIRS include ${OUSTER_HDR_PATH} ${catkin_INCLUDE_DIRS}
+  LIBRARIES ${LIBRARIES}
+  CATKIN_DEPENDS roscpp
+  )
+
+include_directories(
+  include
+  ${catkin_INCLUDE_DIRS}
+  ${OUSTER_HDR_PATH}
+  )
+
+# Ouster build
+
 add_library(ouster_build INTERFACE)
-target_include_directories(ouster_build INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/include ${catkin_INCLUDE_DIRS})
-add_dependencies(ouster_build generate_build_header)
 
-# ==== Libraries ====
-add_library(ouster_client src/client.cpp src/types.cpp src/netcompat.cpp src/lidar_scan.cpp)
-target_link_libraries(ouster_client PUBLIC jsoncpp_lib Eigen3::Eigen ouster_build)
+target_include_directories(ouster_build
+  INTERFACE
+  ${CMAKE_CURRENT_BINARY_DIR}/include
+  ${OUSTER_HDR_PATH}
+  ${catkin_INCLUDE_DIRS}
+  )
+
+add_dependencies(ouster_build
+  generate_build_header
+  ${${PROJECT_NAME}_EXPORTED_TARGETS}
+  ${catkin_EXPORTED_TARGETS}
+  )
+
+# Ouster client
+
+add_library(ouster_client
+  src/client.cpp
+  src/types.cpp
+  src/netcompat.cpp
+  src/lidar_scan.cpp
+  )
+
+target_include_directories(ouster_client
+  PUBLIC
+  include
+  ${catkin_INCLUDE_DIRS}
+  ${OUSTER_HDR_PATH}
+  )
+
+add_dependencies(ouster_client
+  ouster_build
+  ${${PROJECT_NAME}_EXPORTED_TARGETS}
+  ${catkin_EXPORTED_TARGETS}
+  )
+
+target_link_libraries(ouster_client
+  PUBLIC
+  jsoncpp_lib
+  Eigen3::Eigen
+  ${catkin_LIBRARIES}
+  )
+
 if(WIN32)
-  target_link_libraries(ouster_client PUBLIC ws2_32)
+  target_link_libraries(ouster_client
+    PUBLIC
+    ws2_32
+    )
 endif()
-target_include_directories(ouster_client PUBLIC include ${catkin_INCLUDE_DIRS})
 
-# ==== Executables ====
-add_executable(ouster_client_example src/example.cpp)
-target_link_libraries(ouster_client_example ouster_client ouster_build)
+# Ouster client example
+
+add_executable(ouster_client_example
+  src/example.cpp
+  )
+
+target_include_directories(ouster_client_example
+  PUBLIC
+  include
+  ${catkin_INCLUDE_DIRS}
+  PRIVATE
+  ${OUSTER_HDR_PATH}
+  )
+
+add_dependencies(ouster_client_example
+  ouster_build
+  ${${PROJECT_NAME}_EXPORTED_TARGETS}
+  ${catkin_EXPORTED_TARGETS}
+  )
+
+target_link_libraries(ouster_client_example
+  PUBLIC
+  ouster_client
+  ${catkin_LIBRARIES}
+  )
 
 ## --------------------------------------------------------------
 ## |                           Install                          |

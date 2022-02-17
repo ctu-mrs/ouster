@@ -1,8 +1,6 @@
-#include "ouster/types.h"
-
 #include <json/json.h>
 
-#include <Eigen/Eigen>
+#include <eigen3/Eigen/Eigen>
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -12,9 +10,9 @@
 #include <string>
 #include <vector>
 
-#include "ouster/build.h"
-#include "ouster/impl/parsing.h"
-#include "ouster/version.h"
+#include <ouster/build.h>
+#include <ouster/impl/parsing.h>
+#include <ouster/version.h>
 
 namespace ouster {
 namespace sensor {

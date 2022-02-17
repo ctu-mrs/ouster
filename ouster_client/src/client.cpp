@@ -17,9 +17,9 @@
 #include <utility>
 #include <vector>
 
-#include "ouster/build.h"
-#include "ouster/impl/netcompat.h"
-#include "ouster/types.h"
+#include <ouster/build.h>
+#include <ouster/impl/netcompat.h>
+#include <ouster/types.h>
 
 namespace ouster
 {
