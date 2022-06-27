@@ -125,6 +125,7 @@ int OusterImgNodelet::run() {
     range_image.encoding = encoding_;
     range_image.data.resize(W_ * H_ * bit_depth / (8 * sizeof(*range_image.data.data())));
     range_image.header.stamp = m->header.stamp;
+    range_image.header.frame_id = m->header.frame_id;
 
     ambient_image.width    = W_;
     ambient_image.height   = H_;
@@ -132,6 +133,7 @@ int OusterImgNodelet::run() {
     ambient_image.encoding = encoding_;
     ambient_image.data.resize(W_ * H_ * bit_depth / (8 * sizeof(*ambient_image.data.data())));
     ambient_image.header.stamp = m->header.stamp;
+    ambient_image.header.frame_id = m->header.frame_id;
 
     intensity_image.width    = W_;
     intensity_image.height   = H_;
@@ -139,6 +141,7 @@ int OusterImgNodelet::run() {
     intensity_image.encoding = encoding_;
     intensity_image.data.resize(W_ * H_ * bit_depth / (8 * sizeof(*intensity_image.data.data())));
     intensity_image.header.stamp = m->header.stamp;
+    intensity_image.header.frame_id = m->header.frame_id;
 
     using im_t = Eigen::Array<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
     im_t ambient_image_eigen(H_, W_);
