@@ -15,7 +15,9 @@ Use the supplied installation script to install required dependencies.
 
 Other possibility is to get it with wireshark.
 
-More can be found[here](https://static.ouster.dev/sensor-docs/image_route1/image_route2/connecting/connecting-to-sensors.html#connecting-to-sensor) and [here](https://static.ouster.dev/sensor-docs/image_route1/image_route2/networkingg_guide/networking_guide.html#linux).
+More can be found [here](https://static.ouster.dev/sensor-docs/image_route1/image_route2/connecting/connecting-to-sensors.html#connecting-to-sensor) and [here](https://static.ouster.dev/sensor-docs/image_route1/image_route2/networking_guide/networking_guide.html#linux).
+
+
 
 Than all you need to do is to run this script to set the static IP.
 
