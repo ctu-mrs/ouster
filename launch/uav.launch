@@ -61,7 +61,9 @@
       <param name="~/metadata" type="str" value="$(arg metadata)"/>
 
         <!-- Services -->
-      <remap from="~os_config" to="~os_config" />
+      <remap from="set_config" to="~set_config" />
+      <remap from="get_config" to="~get_config" />
+      <remap from="get_metadata" to="~get_metadata" />
 
         <!-- Publishers -->
       <remap from="lidar_packets" to="~lidar_packets" />
