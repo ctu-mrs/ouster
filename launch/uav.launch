@@ -85,6 +85,8 @@
       <remap from="imu" to="~imu"/>
       <remap from="points" to="~points"/>
       <remap from="is_alive" to="~is_alive"/>
+      <remap from="get_config" to="/$(env UAV_NAME)/os_nodelet/get_config" />
+      <remap from="get_metadata" to="/$(env UAV_NAME)/os_nodelet/get_metadata" />
     </node>
   <!-- </group> -->
 
