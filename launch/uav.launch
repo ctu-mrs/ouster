@@ -25,7 +25,7 @@
     2048x10,
     4096x5
     }"/>
-  <arg name="timestamp_mode" default=" " doc="method used to timestamp measurements; possible values: {
+  <arg name="timestamp_mode" default="TIME_FROM_ROS_TIME" doc="method used to timestamp measurements; possible values: {
     TIME_FROM_INTERNAL_OSC,
     TIME_FROM_SYNC_PULSE_IN,
     TIME_FROM_PTP_1588,
