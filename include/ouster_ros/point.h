@@ -8,6 +8,8 @@
 
 #pragma once
 
+// Include the template header implementation of the custom point type in PCL-specific classes and algorithms. This allows for using this point type in pcl::PassThrough, pcl::ExtractIndices, etc. See: https://pointclouds.org/documentation/tutorials/adding_custom_ptype.html#how-to-add-a-new-pointt-type.
+#define PCL_NO_PRECOMPILE
 #include <pcl/point_types.h>
 
 #include <Eigen/Core>
