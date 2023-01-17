@@ -34,6 +34,7 @@
   <arg name="metadata" default=" " doc="path to write metadata file when receiving sensor data"/>
   <arg name="tf_prefix" default="$(env UAV_NAME)" doc="namespace for tf transforms"/>
   <arg name="image" default="false" doc="publish range/intensity/ambient image topic"/>
+  <arg name="replay" default="false" doc="do not connect to a sensor; expect /os_node/{lidar,imu}_packets from replay"/>
 
   <arg name="nodelet" default="standalone" />
   <arg name="nodelet_manager" default="" />
@@ -47,7 +48,7 @@
   <!--     args="manager"/> -->
   <!-- </group> -->
 
-    <node pkg="nodelet" type="nodelet" name="os_nodelet"
+    <node unless="$(arg replay)" pkg="nodelet" type="nodelet" name="os_nodelet"
       output="screen" required="true"
       launch-prefix="$(arg launch_prefix)"
       args="$(arg nodelet) nodelets_os/OusterSensor $(arg nodelet_manager)">
@@ -70,6 +71,14 @@
       <remap from="imu_packets" to="~imu_packets" />
       <remap from="sensor_info" to="~sensor_info" />
       <remap from="uav_status" to="mrs_uav_status/display_string" />
+    </node>
+
+    <node if="$(arg replay)" pkg="nodelet" type="nodelet" name="os_replay"
+      output="screen" required="true"
+      launch-prefix="$(arg launch_prefix)"
+      args="$(arg nodelet) nodelets_os/OusterReplay $(arg nodelet_manager)">
+      <param name="~/metadata" value="$(arg metadata)"/>
+      <remap from="get_metadata" to="/$(env UAV_NAME)/os_nodelet/get_metadata" />
     </node>
 
   <!-- <group ns="$(arg ouster_ns)"> -->
