@@ -43,6 +43,7 @@ class OusterImage : public nodelet::Nodelet {
    private:
     virtual void onInit() override {
         auto& nh = getNodeHandle();
+        ros::Time::waitForValid();
 
         ouster_ros::GetMetadata metadata{};
         auto client = nh.serviceClient<ouster_ros::GetMetadata>("get_metadata");

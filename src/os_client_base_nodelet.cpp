@@ -18,6 +18,7 @@ namespace nodelets_os {
 
 void OusterClientBase::onInit() {
     auto& nh = getNodeHandle();
+    ros::Time::waitForValid();
     get_metadata_srv =
         nh.advertiseService<GetMetadata::Request, GetMetadata::Response>(
             "get_metadata",

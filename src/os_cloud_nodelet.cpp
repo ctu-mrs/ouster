@@ -39,6 +39,7 @@ class OusterCloud : public nodelet::Nodelet {
 
     virtual void onInit() override {
         auto& pnh = getPrivateNodeHandle();
+        ros::Time::waitForValid();
         auto tf_prefix = pnh.param("tf_prefix", std::string{});
         if (is_arg_set(tf_prefix) && tf_prefix.back() != '/')
             tf_prefix.append("/");

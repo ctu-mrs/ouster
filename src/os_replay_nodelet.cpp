@@ -19,6 +19,7 @@ class OusterReplay : public OusterClientBase {
    private:
     virtual void onInit() override {
         auto& pnh = getPrivateNodeHandle();
+        ros::Time::waitForValid();
         auto meta_file = pnh.param("metadata", std::string{});
         if (!is_arg_set(meta_file)) {
             NODELET_ERROR("Must specify metadata file in replay mode");
