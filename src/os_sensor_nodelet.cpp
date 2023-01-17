@@ -29,31 +29,18 @@ namespace nodelets_os {
 class OusterSensor : public OusterClientBase {
    private:
     virtual void onInit() override {
-        std::cout << "1" << std::endl;
         auto& pnh = getPrivateNodeHandle();
-        std::cout << "2" << std::endl;
         ros::Time::waitForValid();
-        std::cout << "3" << std::endl;
         hostname = pnh.param("sensor_hostname", std::string{});
-        std::cout << "4" << std::endl;
         auto sensor_conf = create_sensor_config_rosparams(pnh);
-        std::cout << "5" << std::endl;
         configure_sensor(hostname, sensor_conf.first, sensor_conf.second);
-        std::cout << "6" << std::endl;
         auto udp_dest = pnh.param("udp_dest", std::string{});
-        std::cout << "7" << std::endl;
         auto lidar_port = pnh.param("lidar_port", 0);
-        std::cout << "8" << std::endl;
         auto imu_port = pnh.param("imu_port", 0);
-        std::cout << "9" << std::endl;
         sensor_client = create_client(hostname, udp_dest, lidar_port, imu_port);
-        std::cout << "10" << std::endl;
         update_config_and_metadata(*sensor_client);
-        std::cout << "11" << std::endl;
         save_metadata(pnh);
-        std::cout << "12" << std::endl;
         OusterClientBase::onInit();
-        std::cout << "end (almost)" << std::endl;
         create_get_config_service();
         create_set_config_service();
         start_connection_loop();

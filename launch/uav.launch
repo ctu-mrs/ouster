@@ -73,9 +73,10 @@
     </node>
 
   <!-- <group ns="$(arg ouster_ns)"> -->
+    <!-- The driver may not start if os_cloud_nodelet launches before os_nodelet -->
     <node pkg="nodelet" type="nodelet" name="os_cloud_nodelet"
       output="screen" required="true"
-      launch-prefix="$(arg launch_prefix)"
+      launch-prefix="bash -c 'sleep 2; $0 $@' $(arg launch_prefix)"
       args="$(arg nodelet) nodelets_os/OusterCloud $(arg nodelet_manager)">
       <param name="~/tf_prefix" type="str" value="$(arg tf_prefix)"/>
       <param name="~/timestamp_mode" type="str" value="$(arg timestamp_mode)"/>
