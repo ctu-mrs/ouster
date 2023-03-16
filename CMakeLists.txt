@@ -37,7 +37,7 @@ add_service_files(FILES GetConfig.srv SetConfig.srv GetMetadata.srv)
 generate_messages(DEPENDENCIES std_msgs sensor_msgs geometry_msgs)
 
 set(_ouster_ros_INCLUDE_DIRS
-  "include;ouster-sdk/ouster_client/include;ouster-sdk/ouster_client/include/optional-lite")
+  "include/;ouster-sdk/ouster_client/include/;ouster-sdk/ouster_client/include/optional-lite/")
 
 catkin_package(
   INCLUDE_DIRS
@@ -100,7 +100,7 @@ install(
 
 install(
   DIRECTORY ${_ouster_ros_INCLUDE_DIRS}
-  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+  DESTINATION ${CATKIN_GLOBAL_INCLUDE_DESTINATION}
 )
 
 install(
