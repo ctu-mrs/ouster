@@ -43,22 +43,18 @@ class OusterCloud : public nodelet::Nodelet {
         auto& pnh = getPrivateNodeHandle();
         ros::Time::waitForValid();
 
-        NODELET_INFO("[OusterCloud]: Initializing.");
+        NODELET_INFO_STREAM("[OusterCloud]: Initializing.");
         tf_listener_ptr = std::make_unique<tf2_ros::TransformListener>(tf_buffer);
 
         deskew = false;
-        target_frame = pnh.param("target_frame", std::string{});
         fixed_frame = pnh.param("fixed_frame", std::string{});
         const double default_lookup_timeout_s = 0.05;
         lookup_timeout = ros::Duration(pnh.param("lookup_timeout_s", default_lookup_timeout_s));
-        if (!target_frame.empty() && !fixed_frame.empty())
+        if (!fixed_frame.empty())
         {
-          NODELET_INFO_STREAM("[OusterCloud]: Enabling deskewed transformation to \"" << target_frame << "\" using \"" << fixed_frame << "\" as the fixed frame.");
+          NODELET_INFO_STREAM("[OusterCloud]: Enabling deskewed using \"" << fixed_frame << "\" as the fixed frame.");
           deskew = true;
         }
-        else if ((target_frame.empty() && !fixed_frame.empty())
-         || (!target_frame.empty() && fixed_frame.empty()))
-          NODELET_WARN_STREAM("[OusterCloud]: Both target_frame and fixed_frame must be specified to use deskewing! Not deskewing.");
 
         auto tf_prefix = pnh.param("tf_prefix", std::string{});
         if (is_arg_set(tf_prefix) && tf_prefix.back() != '/')
@@ -136,19 +132,17 @@ class OusterCloud : public nodelet::Nodelet {
                                             const ros::Time& msg_ts) {
         for (int i = 0; i < n_returns; ++i) {
 
-            bool transformed = false;
             if (deskew)
-              transformed = scan_to_cloud_deskewed(xyz_lut, msg_ts, ls, cloud, i,
+              scan_to_cloud_deskewed(xyz_lut, msg_ts, ls, cloud, i,
                    tf_buffer,
                    sensor_frame,
-                   target_frame,
+                   sensor_frame,
                    fixed_frame);
             else
               scan_to_cloud(xyz_lut, msg_ts, ls, cloud, i);
 
-            const auto output_frame = transformed ? target_frame : sensor_frame;
             sensor_msgs::PointCloud2 pc =
-                ouster_ros::cloud_to_cloud_msg(cloud, msg_ts, output_frame);
+                ouster_ros::cloud_to_cloud_msg(cloud, msg_ts, sensor_frame);
             sensor_msgs::PointCloud2Ptr pc_ptr =
                 boost::make_shared<sensor_msgs::PointCloud2>(pc);
             lidar_pubs[i].publish(pc_ptr);
@@ -226,7 +220,6 @@ class OusterCloud : public nodelet::Nodelet {
 
     bool deskew;
     std::string fixed_frame;
-    std::string target_frame;
     ros::Duration lookup_timeout;
 
     std::string sensor_frame;

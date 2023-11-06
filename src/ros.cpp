@@ -155,7 +155,7 @@ void scan_to_cloud(const ouster::XYZLut& xyz_lut,
     }
 }
 
-bool scan_to_cloud_deskewed(
+void scan_to_cloud_deskewed(
                    const ouster::XYZLut& xyz_lut,
                    const ros::Time& scan_ts, const ouster::LidarScan& ls,
                    ouster_ros::Cloud& cloud, int return_index,
@@ -201,7 +201,7 @@ bool scan_to_cloud_deskewed(
     {
       ROS_WARN_STREAM("[OusterCloud]: Cannot deskew: " << ex.what());
       scan_to_cloud(xyz_lut, scan_ts, ls, cloud, return_index);
-      return false;
+      return;
     }
 
     int invalid_tfs = 0;
@@ -273,7 +273,6 @@ bool scan_to_cloud_deskewed(
     {
         ROS_WARN_STREAM("Could not estimate motion from \"" << sensor_frame << "\" to \"" << target_frame << "\" through fixed frame \"" << fixed_frame << "\" - some points (" << invalid_tfs*cloud.height << "/" << cloud.size() << ") are not corrected based on motion.");
     }
-    return true;
 }
 
 sensor_msgs::PointCloud2 cloud_to_cloud_msg(const Cloud& cloud,

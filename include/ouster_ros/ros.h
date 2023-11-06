@@ -93,7 +93,7 @@ void scan_to_cloud(const ouster::XYZLut& xyz_lut,
                    const ros::Time& scan_ts, const ouster::LidarScan& ls,
                    ouster_ros::Cloud& cloud_out, int return_index = 0);
 
-bool scan_to_cloud_deskewed(
+void scan_to_cloud_deskewed(
                    const ouster::XYZLut& xyz_lut,
                    const ros::Time& scan_ts, const ouster::LidarScan& ls,
                    ouster_ros::Cloud& cloud_out, int return_index,
