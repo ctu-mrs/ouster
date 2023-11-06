@@ -87,6 +87,8 @@
       output="screen" required="true"
       launch-prefix="bash -c 'sleep 2; $0 $@' $(arg launch_prefix)"
       args="$(arg nodelet) nodelets_os/OusterCloud $(arg nodelet_manager)">
+      <param name="fixed_frame" type="str" value="$(arg UAV_NAME)/rtk_origin"/>
+      <param name="target_frame" type="str" value="$(arg UAV_NAME)/rtk_origin"/>
       <param name="~/tf_prefix" type="str" value="$(arg tf_prefix)"/>
       <param name="~/timestamp_mode" type="str" value="$(arg timestamp_mode)"/>
       <remap from="os_config" to="os_nodelet/os_config"/>

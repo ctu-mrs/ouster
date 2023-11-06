@@ -17,6 +17,7 @@
 #include <sensor_msgs/PointCloud2.h>
 
 #include <geometry_msgs/TransformStamped.h>
+#include <tf2_ros/buffer.h>
 
 #include <chrono>
 #include <string>
@@ -89,8 +90,18 @@ sensor_msgs::Imu packet_to_imu_msg(const PacketMsg& pm,
  * @param[in] return_index index of return desired starting at 0
  */
 void scan_to_cloud(const ouster::XYZLut& xyz_lut,
-                   ouster::LidarScan::ts_t scan_ts, const ouster::LidarScan& ls,
-                   ouster_ros::Cloud& cloud, int return_index = 0);
+                   const ros::Time& scan_ts, const ouster::LidarScan& ls,
+                   ouster_ros::Cloud& cloud_out, int return_index = 0);
+
+bool scan_to_cloud_deskewed(
+                   const ouster::XYZLut& xyz_lut,
+                   const ros::Time& scan_ts, const ouster::LidarScan& ls,
+                   ouster_ros::Cloud& cloud_out, int return_index,
+                   tf2_ros::Buffer & tf_buffer,
+                   const std::string & sensor_frame,
+                   const std::string & target_frame,
+                   const std::string & fixed_frame,
+                   const ros::Duration& lookup_timeout = ros::Duration(0.05));
 
 /**
  * Serialize a PCL point cloud to a ROS message

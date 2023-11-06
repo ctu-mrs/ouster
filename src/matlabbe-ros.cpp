@@ -118,7 +118,7 @@ inline ouster::img_t<T> get_or_fill_zero(sensor::ChanField f,
 }
 
 void scan_to_cloud(const ouster::XYZLut& xyz_lut,
-                   const ros::Time& scan_ts, const ouster::LidarScan& ls,
+                   ouster::LidarScan::ts_t scan_ts, const ouster::LidarScan& ls,
                    ouster_ros::Cloud& cloud, int return_index) {
     bool second = (return_index == 1);
     cloud.resize(ls.w * ls.h);
@@ -141,7 +141,8 @@ void scan_to_cloud(const ouster::XYZLut& xyz_lut,
     for (auto u = 0; u < ls.h; u++) {
         for (auto v = 0; v < ls.w; v++) {
             const auto xyz = points.row(u * ls.w + v);
-            const auto ts = (std::chrono::nanoseconds(timestamp[v]) - std::chrono::nanoseconds(scan_ts.toNSec())).count();
+            const auto ts =
+                (std::chrono::nanoseconds(timestamp[v]) - scan_ts).count();
             cloud(v, u) = ouster_ros::Point{
                 {{static_cast<float>(xyz(0)), static_cast<float>(xyz(1)),
                   static_cast<float>(xyz(2)), 1.0f}},
@@ -155,16 +156,39 @@ void scan_to_cloud(const ouster::XYZLut& xyz_lut,
     }
 }
 
-bool scan_to_cloud_deskewed(
-                   const ouster::XYZLut& xyz_lut,
-                   const ros::Time& scan_ts, const ouster::LidarScan& ls,
+void scan_to_cloud(const ouster::XYZLut& xyz_lut,
+                   ouster::LidarScan::ts_t scan_ts, const ouster::LidarScan& ls,
                    ouster_ros::Cloud& cloud, int return_index,
-                   tf2_ros::Buffer & tf_buffer,
-                   const std::string & sensor_frame,
-                   const std::string & target_frame,
+                   tf::TransformListener & listener,
                    const std::string & fixed_frame,
-                   const ros::Duration& lookup_timeout)
-{
+                   const std::string & sensor_frame,
+                   const double & waitForTransform) {
+
+    ros::Time start_stamp, pt_stamp;
+    start_stamp.fromNSec(scan_ts.count());                  // Get first stamp
+    pt_stamp.fromNSec(ls.header(ls.w-1).timestamp.count()); // Get last stamp
+
+    std::string errorMsg;
+    if(waitForTransform>0.0 &&
+       !listener.waitForTransform(sensor_frame,
+                                  start_stamp,
+                                  sensor_frame,
+                                  pt_stamp,
+                                  fixed_frame,
+                                  ros::Duration(waitForTransform),
+                                  ros::Duration(0.01),
+                                  &errorMsg))
+    {
+        ROS_WARN("Could not estimate motion of %s accordingly to fixed "
+                 "frame %s, returning possible skewed cloud! (%s)",
+            sensor_frame.c_str(),
+            fixed_frame.c_str(),
+            errorMsg.c_str());
+        // Do original copy
+        scan_to_cloud(xyz_lut, scan_ts, ls, cloud, return_index);
+        return;
+    }
+
     bool second = (return_index == 1);
     cloud.resize(ls.w * ls.h);
 
@@ -180,100 +204,62 @@ bool scan_to_cloud_deskewed(
     ouster::img_t<uint16_t> reflectivity = get_or_fill_zero<uint16_t>(
         suitable_return(sensor::ChanField::REFLECTIVITY, second), ls);
 
-    const auto points = ouster::cartesian(range, xyz_lut);
-    const auto& timestamp = ls.timestamp();
-    const auto start_stamp_internal = timestamp(0);
-    const auto end_dt = timestamp(ls.w-1) - start_stamp_internal;
-    const auto start_stamp_ros = scan_ts;
-    const auto end_stamp_ros = scan_ts + ros::Duration().fromNSec(end_dt);
-    geometry_msgs::TransformStamped fallback_tf;
-    try
-    {
-      fallback_tf = tf_buffer.lookupTransform(
-          target_frame,
-          start_stamp_ros,
-          sensor_frame,
-          end_stamp_ros,
-          fixed_frame,
-          lookup_timeout);
-    }
-    catch (const tf2::TransformException& ex)
-    {
-      ROS_WARN_STREAM("[OusterCloud]: Cannot deskew: " << ex.what());
-      scan_to_cloud(xyz_lut, scan_ts, ls, cloud, return_index);
-      return false;
-    }
+    auto points = ouster::cartesian(range, xyz_lut);
+    auto timestamp = ls.timestamp();
 
-    int invalid_tfs = 0;
-    for (auto col_it = 0; col_it < ls.w; col_it++)
-    {
-        const auto col_stamp_internal = timestamp(col_it);
-        const auto col_dt = col_stamp_internal - start_stamp_internal;
-        const auto pt_stamp = start_stamp_ros + ros::Duration().fromNSec(col_dt);
+    int transformsNotValid = 0;
+    for (auto v = 0; v < ls.w; v++) {
+        const auto ts =
+            (std::chrono::nanoseconds(timestamp[v]) - scan_ts).count();
+        pt_stamp.fromNSec(ls.header(v).timestamp.count());
 
-        // find the corresponding transformation
-        geometry_msgs::TransformStamped tf;
-        bool tf_valid = false;
-        try
-        {
-/* virtual geometry_msgs::TransformStamped
- * lookupTransform (
- * const std::string &target_frame,
- * const ros::Time &target_time,
- * const std::string &source_frame,
- * const ros::Time &source_time,
- * const std::string &fixed_frame,
- * const ros::Duration timeout
- * ) const */
-            tf = tf_buffer.lookupTransform(
-                target_frame,
-                start_stamp_ros,
+        tf::StampedTransform transform;
+        bool transformValid = false;
+        try {
+            listener.lookupTransform(
+                sensor_frame,
+                start_stamp,
                 sensor_frame,
                 pt_stamp,
-                fixed_frame);
-            tf_valid = true;
+                fixed_frame,
+                transform);
+            transformValid = true;
         }
-        catch (const tf2::TransformException& ex)
+        catch(tf::TransformException & ex)
         {
-            invalid_tfs++;
-            tf = fallback_tf;
+            ++transformsNotValid;
         }
-        // interpret the transformation as an eigen matrix
-        const Eigen::Affine3d tf_eig = tf2::transformToEigen(tf.transform);
 
-        // create a temporary matrix of points in the scan column to be transformed
-        Eigen::Matrix<double, 3, Eigen::Dynamic> col_points;
-        col_points.resize(3, ls.h);
-        for (auto point_it = 0; point_it < ls.h; point_it++)
-            col_points.col(point_it) = points.row(point_it * ls.w + col_it);
-        // transform the points in the matrix
-        if (tf_valid)
-          col_points = tf_eig * col_points;
+        for (auto u = 0; u < ls.h; u++) {
+            const auto xyz = points.row(u * ls.w + v);
 
-        for (auto point_it = 0; point_it < ls.h; point_it++)
-        {
-            // each column in col_points represents one point corresponding to one row of the current column
-            // from the LiDAR's scan with index (row_it, col_it) ... a bit confusing, I know
-            const Eigen::Vector3f pt_eig = col_points.col(point_it).cast<float>();
-            const ouster_ros::Point point
-            {
-                {{pt_eig.x(), pt_eig.y(), pt_eig.z(), 1.0f}},
-                static_cast<float>(signal(point_it, col_it)),
-                static_cast<uint32_t>(col_dt),
-                static_cast<uint16_t>(reflectivity(point_it, col_it)),
-                static_cast<uint8_t>(point_it),
-                static_cast<uint16_t>(near_ir(point_it, col_it)),
-                static_cast<uint32_t>(range(point_it, col_it))
-            };
-            cloud(col_it, point_it) = point;
+            auto pt = tf::Point(
+                static_cast<float>(xyz(0)),
+                static_cast<float>(xyz(1)),
+                static_cast<float>(xyz(2)));
+            if(transformValid) {
+                pt = transform * pt;
+            }
+
+            cloud(v, u) = ouster_ros::Point{
+                {{(float)pt.x(), (float)pt.y(), (float)pt.z(), 1.0f}},
+                static_cast<float>(signal(u, v)),
+                static_cast<uint32_t>(ts),
+                static_cast<uint16_t>(reflectivity(u, v)),
+                static_cast<uint8_t>(u),
+                static_cast<uint16_t>(near_ir(u, v)),
+                static_cast<uint32_t>(range(u, v))};
         }
     }
 
-    if (invalid_tfs > 0)
-    {
-        ROS_WARN_STREAM("Could not estimate motion from \"" << sensor_frame << "\" to \"" << target_frame << "\" through fixed frame \"" << fixed_frame << "\" - some points (" << invalid_tfs*cloud.height << "/" << cloud.size() << ") are not corrected based on motion.");
+    if(transformsNotValid!=0) {
+        ROS_WARN("Could not estimate motion of %s accordingly to fixed "
+                 "frame %s, some points (%d/%d) are not corrected based on motion.",
+            sensor_frame.c_str(),
+            fixed_frame.c_str(),
+            transformsNotValid*cloud.height,
+            (int)cloud.size());
     }
-    return true;
 }
 
 sensor_msgs::PointCloud2 cloud_to_cloud_msg(const Cloud& cloud,
