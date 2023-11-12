@@ -1,3 +1,7 @@
+# This repository is archived
+
+This repo was part of the old MRS UAV System and will be eventually deleted.
+
 # Installation
 
 Use the supplied installation script to install required dependencies.
